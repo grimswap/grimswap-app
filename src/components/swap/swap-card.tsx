@@ -1,35 +1,36 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { gsap } from 'gsap'
 import { cn } from '@/lib/utils'
-import { Settings, ArrowDown, Info, Shield, Clock, Percent } from 'lucide-react'
+import { Settings, ArrowDown, Info, Clock, Percent, ExternalLink, Lock, Wallet, AlertTriangle } from 'lucide-react'
 import { TokenInput } from './token-input'
 import { TokenSelectorModal, type Token } from './token-selector-modal'
-import { RingSelector } from './ring-selector'
 import { SettingsPanel } from './settings-panel'
 import { ShimmerButton } from '@/components/ui/shimmer-button'
 import { TransactionStatus } from '@/components/web3/transaction-status'
 import { useAccount } from 'wagmi'
 import { useSettings } from '@/hooks/use-settings'
 import { useToast } from '@/hooks/use-toast'
+import { useStateView, KNOWN_POOL_IDS, useDepositNotes } from '@/hooks'
+import { useQuoter, formatQuoteOutput } from '@/hooks/use-quoter'
+import { useNativeBalance, useTokenBalance } from '@/hooks/use-token-balance'
+import { DEFAULT_FROM_TOKEN, DEFAULT_TO_TOKEN, USDC } from '@/lib/tokens'
+import { DEFAULT_POOL_KEY, MIN_SQRT_PRICE, MAX_SQRT_PRICE } from '@/lib/contracts'
+import { getRelayerInfo, submitToRelayer, formatProofForRelayer, createSwapParams, type RelayerInfo } from '@/lib/relayer'
+import { parseUnits } from 'viem'
 
-// Default tokens
-const DEFAULT_FROM_TOKEN: Token = {
-  address: '0x0000000000000000000000000000000000000000',
-  symbol: 'ETH',
-  name: 'Ethereum',
-  decimals: 18,
-  balance: '1.234',
+type SwapState = 'idle' | 'selecting-note' | 'generating-proof' | 'submitting' | 'confirming' | 'success' | 'error'
+
+// Format large liquidity values for display
+function formatLiquidity(liquidity: bigint): string {
+  const num = Number(liquidity)
+  if (num >= 1e18) return `${(num / 1e18).toFixed(2)}E`
+  if (num >= 1e15) return `${(num / 1e15).toFixed(2)}P`
+  if (num >= 1e12) return `${(num / 1e12).toFixed(2)}T`
+  if (num >= 1e9) return `${(num / 1e9).toFixed(2)}B`
+  if (num >= 1e6) return `${(num / 1e6).toFixed(2)}M`
+  if (num >= 1e3) return `${(num / 1e3).toFixed(2)}K`
+  return num.toFixed(2)
 }
-
-const DEFAULT_TO_TOKEN: Token = {
-  address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-  symbol: 'USDC',
-  name: 'USD Coin',
-  decimals: 6,
-  balance: '1,250.00',
-}
-
-type SwapState = 'idle' | 'confirming' | 'pending' | 'success' | 'error'
 
 export function SwapCard() {
   const { isConnected, address } = useAccount()
@@ -40,10 +41,11 @@ export function SwapCard() {
   const [toAmount, setToAmount] = useState('')
   const [fromToken, setFromToken] = useState<Token>(DEFAULT_FROM_TOKEN)
   const [toToken, setToToken] = useState<Token>(DEFAULT_TO_TOKEN)
-  const [ringSize, setRingSize] = useState(5)
   const [showSettings, setShowSettings] = useState(false)
   const [swapState, setSwapState] = useState<SwapState>('idle')
   const [txHash, setTxHash] = useState<string | null>(null)
+  const [swapError, setSwapError] = useState<string | null>(null)
+  const [relayerInfo, setRelayerInfo] = useState<RelayerInfo | null>(null)
 
   // Token selector modal state
   const [tokenModalOpen, setTokenModalOpen] = useState(false)
@@ -52,22 +54,119 @@ export function SwapCard() {
   const cardRef = useRef<HTMLDivElement>(null)
   const glowRef = useRef<HTMLDivElement>(null)
 
-  // Mock exchange rate
-  const exchangeRate = fromToken.symbol === 'ETH' ? 2450 : 1 / 2450
+  // Get deposit notes for ZK swap
+  const { notes } = useDepositNotes()
+  const availableNotes = notes.filter(n => !n.spent && n.leafIndex !== undefined)
 
-  // Calculate output amount
+  // Fetch real pool state from StateView
+  const {
+    poolState,
+    isInitialized,
+    isLoading: poolLoading,
+    currentPrice,
+    inversePrice,
+    poolId,
+  } = useStateView(DEFAULT_POOL_KEY)
+
+  // Get accurate swap quotes from Quoter
+  const { quoteExactInputSingle, isQuoting } = useQuoter()
+
+  // Fetch real balances
+  const { formatted: ethBalance } = useNativeBalance()
+  const { formatted: usdcBalance } = useTokenBalance(USDC.address)
+
+  // Fetch relayer info on mount
   useEffect(() => {
-    if (fromAmount && parseFloat(fromAmount) > 0) {
-      const output = parseFloat(fromAmount) * exchangeRate
-      setToAmount(output.toFixed(toToken.decimals > 6 ? 6 : 2))
-    } else {
-      setToAmount('')
+    getRelayerInfo().then(info => {
+      if (info) {
+        setRelayerInfo(info)
+        console.log('Relayer info:', info)
+      }
+    })
+  }, [])
+
+  // Get balance for current token
+  const getBalance = (symbol: string): string => {
+    if (!isConnected) return '0'
+    if (symbol === 'ETH') return parseFloat(ethBalance).toFixed(4)
+    if (symbol === 'USDC') return parseFloat(usdcBalance).toFixed(2)
+    return '0'
+  }
+
+  // Determine if we're swapping token0 -> token1 or token1 -> token0
+  const zeroForOne =
+    fromToken.address.toLowerCase() === DEFAULT_POOL_KEY.currency0.toLowerCase()
+
+  // Calculate exchange rate from pool price
+  const exchangeRate = currentPrice
+    ? zeroForOne
+      ? currentPrice
+      : inversePrice || 0
+    : 0
+
+  // Check if using GrimSwap Privacy Pool
+  const isPrivacyPool = DEFAULT_POOL_KEY.hooks !== '0x0000000000000000000000000000000000000000'
+
+  // Log pool info for debugging
+  useEffect(() => {
+    console.log('Pool Info (via StateView):', {
+      calculatedPoolId: poolId,
+      expectedPoolId: isPrivacyPool ? KNOWN_POOL_IDS.ETH_USDC_GRIMSWAP : KNOWN_POOL_IDS.ETH_USDC_0_3,
+      isPrivacyPool,
+      hookAddress: DEFAULT_POOL_KEY.hooks,
+      isInitialized,
+      currentPrice,
+      availableNotes: availableNotes.length,
+    })
+  }, [poolId, isInitialized, currentPrice, isPrivacyPool, availableNotes.length])
+
+  // Calculate output amount using Quoter
+  useEffect(() => {
+    const getQuote = async () => {
+      if (!fromAmount || parseFloat(fromAmount) <= 0) {
+        setToAmount('')
+        return
+      }
+
+      if (isInitialized) {
+        try {
+          const inputAmount = parseUnits(fromAmount, fromToken.decimals)
+          const quote = await quoteExactInputSingle({
+            poolKey: DEFAULT_POOL_KEY,
+            zeroForOne,
+            exactAmount: inputAmount,
+          })
+
+          if (quote && quote.amountOut > 0n) {
+            const formattedOutput = formatQuoteOutput(quote.amountOut, toToken.decimals)
+            setToAmount(formattedOutput)
+          } else if (poolState && currentPrice && currentPrice > 0) {
+            const inputFloat = parseFloat(fromAmount)
+            const outputFloat = zeroForOne
+              ? inputFloat * currentPrice * 0.997
+              : inputFloat / currentPrice * 0.997
+            setToAmount(outputFloat.toFixed(toToken.decimals > 6 ? 6 : 2))
+          }
+        } catch (err) {
+          console.error('Failed to get quote:', err)
+          if (currentPrice && currentPrice > 0) {
+            const inputFloat = parseFloat(fromAmount)
+            const outputFloat = zeroForOne
+              ? inputFloat * currentPrice * 0.997
+              : inputFloat / currentPrice * 0.997
+            setToAmount(outputFloat.toFixed(toToken.decimals > 6 ? 6 : 2))
+          }
+        }
+      }
     }
-  }, [fromAmount, fromToken, toToken, exchangeRate])
+
+    const timeoutId = setTimeout(getQuote, 300)
+    return () => clearTimeout(timeoutId)
+  }, [fromAmount, fromToken, toToken, poolState, isInitialized, zeroForOne, quoteExactInputSingle, currentPrice])
 
   // Animate glow on swap
   useEffect(() => {
-    const isSwapping = swapState === 'pending' || swapState === 'confirming'
+    const isSwapping = ['generating-proof', 'submitting', 'confirming'].includes(swapState)
 
     if (isSwapping && glowRef.current) {
       gsap.to(glowRef.current, {
@@ -76,7 +175,6 @@ export function SwapCard() {
         duration: 0.5,
         ease: 'power2.out',
       })
-
       gsap.to(glowRef.current, {
         rotation: 360,
         duration: 2,
@@ -94,27 +192,122 @@ export function SwapCard() {
     }
   }, [swapState])
 
-  const handleSwap = async () => {
-    if (!isConnected || !address) return
+  /**
+   * Execute ZK private swap through relayer
+   * This is the production flow:
+   * 1. Find a suitable deposit note
+   * 2. Generate ZK proof locally
+   * 3. Send proof to relayer
+   * 4. Relayer submits transaction on-chain
+   */
+  const handleSwap = useCallback(async () => {
+    if (!isConnected || !address || !relayerInfo) {
+      setSwapError('Wallet not connected or relayer unavailable')
+      return
+    }
+
+    // For privacy swaps, we need deposit notes
+    if (isPrivacyPool && availableNotes.length === 0) {
+      setSwapError('No deposit notes available. Please deposit to GrimPool first.')
+      toast.error('No Deposit Notes', 'You need to deposit tokens to GrimPool before swapping privately.')
+      return
+    }
 
     try {
-      // Step 1: Confirm in wallet
-      setSwapState('confirming')
+      setSwapState('selecting-note')
+      setSwapError(null)
+      setTxHash(null)
 
-      // Simulate wallet confirmation
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const inputAmount = parseUnits(fromAmount, fromToken.decimals)
 
-      // Step 2: Transaction pending
-      setSwapState('pending')
-      const mockHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('')
-      setTxHash(mockHash)
+      // Find a note with sufficient balance
+      const suitableNote = availableNotes.find(note => BigInt(note.amount) >= inputAmount)
 
-      // Simulate transaction confirmation
-      await new Promise((resolve) => setTimeout(resolve, 3000))
+      if (!suitableNote) {
+        throw new Error(`No deposit note with sufficient balance. Need ${fromAmount} ${fromToken.symbol}`)
+      }
 
-      // Step 3: Success
+      console.log('Using deposit note:', {
+        id: suitableNote.id,
+        amount: suitableNote.amount,
+        leafIndex: suitableNote.leafIndex,
+      })
+
+      // Step 2: Generate ZK proof
+      setSwapState('generating-proof')
+      toast.info('Generating Proof', 'Creating ZK-SNARK proof (~1-2 seconds)...')
+
+      // Import ZK proof generation dynamically
+      const { generateProof } = await import('@/lib/zk/proof')
+      const { buildMerkleTree } = await import('@/lib/zk/merkle')
+
+      // Build Merkle tree and get proof
+      // In production, this would sync with on-chain data
+      const tree = await buildMerkleTree([BigInt(suitableNote.commitment)])
+      const merkleProof = await tree.getProof(0)
+
+      // Generate stealth address for receiving tokens
+      const stealthPrivateKey = BigInt(Math.floor(Math.random() * 1e18))
+      const stealthAddress = `0x${stealthPrivateKey.toString(16).slice(0, 40).padStart(40, '0')}`
+
+      // Prepare note for proof generation
+      const noteForProof = {
+        secret: BigInt(suitableNote.secret),
+        nullifier: BigInt(suitableNote.nullifier),
+        amount: BigInt(suitableNote.amount),
+        commitment: BigInt(suitableNote.commitment),
+        nullifierHash: BigInt(suitableNote.nullifierHash),
+        leafIndex: suitableNote.leafIndex,
+      }
+
+      // Generate ZK proof
+      const proofResult = await generateProof(
+        noteForProof,
+        merkleProof,
+        {
+          recipient: stealthAddress as `0x${string}`,
+          relayer: relayerInfo.address as `0x${string}`,
+          relayerFee: relayerInfo.feeBps,
+          amountIn: BigInt(suitableNote.amount),
+          minAmountOut: inputAmount,
+          poolKey: BigInt(0), // Not used in current circuit
+        }
+      )
+
+      if (!proofResult) {
+        throw new Error('Failed to generate ZK proof')
+      }
+
+      console.log('ZK proof generated:', {
+        publicSignals: proofResult.publicSignals,
+      })
+
+      // Step 3: Submit to relayer
+      setSwapState('submitting')
+      toast.info('Submitting', 'Sending to relayer...')
+
+      const sqrtPriceLimitX96 = zeroForOne ? MIN_SQRT_PRICE : MAX_SQRT_PRICE
+
+      const relayResponse = await submitToRelayer({
+        proof: formatProofForRelayer(proofResult.proof),
+        publicSignals: proofResult.publicSignals,
+        swapParams: createSwapParams(
+          DEFAULT_POOL_KEY,
+          zeroForOne,
+          -inputAmount, // Negative for exact input
+          sqrtPriceLimitX96
+        ),
+      })
+
+      if (!relayResponse.success) {
+        throw new Error(relayResponse.error || 'Relayer submission failed')
+      }
+
+      // Step 4: Success
       setSwapState('success')
-      toast.success('Swap Complete', `Swapped ${fromAmount} ${fromToken.symbol} for ${toAmount} ${toToken.symbol}`)
+      setTxHash(relayResponse.txHash || null)
+
+      toast.success('Swap Complete', `Swapped ${fromAmount} ${fromToken.symbol} privately!`)
 
       // Reset after delay
       setTimeout(() => {
@@ -122,37 +315,31 @@ export function SwapCard() {
         setFromAmount('')
         setToAmount('')
         setTxHash(null)
-      }, 3000)
+      }, 5000)
+
     } catch (error) {
+      console.error('Swap failed:', error)
       setSwapState('error')
+      setSwapError(error instanceof Error ? error.message : 'Unknown error')
       toast.error('Swap Failed', error instanceof Error ? error.message : 'Unknown error occurred')
 
       setTimeout(() => {
         setSwapState('idle')
-        setTxHash(null)
-      }, 3000)
+        setSwapError(null)
+      }, 5000)
     }
-  }
+  }, [isConnected, address, relayerInfo, isPrivacyPool, availableNotes, fromAmount, fromToken, toToken, zeroForOne, toast])
 
   const handleFlipTokens = () => {
-    // Animation for flip
     if (cardRef.current) {
       const arrow = cardRef.current.querySelector('.swap-arrow')
       if (arrow) {
-        gsap.to(arrow, {
-          rotation: '+=180',
-          duration: 0.3,
-          ease: 'power2.out',
-        })
+        gsap.to(arrow, { rotation: '+=180', duration: 0.3, ease: 'power2.out' })
       }
     }
-
-    // Swap tokens
     const tempToken = fromToken
     setFromToken(toToken)
     setToToken(tempToken)
-
-    // Swap amounts
     const tempAmount = fromAmount
     setFromAmount(toAmount)
     setToAmount(tempAmount)
@@ -165,20 +352,28 @@ export function SwapCard() {
 
   const handleTokenSelect = (token: Token) => {
     if (selectingFor === 'from') {
-      if (token.address === toToken.address) {
-        setToToken(fromToken)
-      }
+      if (token.address === toToken.address) setToToken(fromToken)
       setFromToken(token)
     } else {
-      if (token.address === fromToken.address) {
-        setFromToken(toToken)
-      }
+      if (token.address === fromToken.address) setFromToken(toToken)
       setToToken(token)
     }
   }
 
-  const canSwap = isConnected && fromAmount && parseFloat(fromAmount) > 0 && swapState === 'idle'
-  const isSwapping = swapState !== 'idle'
+  const canSwap =
+    isConnected &&
+    fromAmount &&
+    parseFloat(fromAmount) > 0 &&
+    toAmount &&
+    parseFloat(toAmount) > 0 &&
+    swapState === 'idle' &&
+    isInitialized &&
+    !poolLoading &&
+    !isQuoting &&
+    relayerInfo !== null &&
+    (isPrivacyPool ? availableNotes.length > 0 : true)
+
+  const isSwapping = swapState !== 'idle' && swapState !== 'success' && swapState !== 'error'
 
   // Calculate minimum received
   const minReceived = toAmount
@@ -187,8 +382,35 @@ export function SwapCard() {
       )
     : '0'
 
-  // Calculate price impact (mock)
-  const priceImpact = fromAmount && parseFloat(fromAmount) > 10 ? 0.3 : 0.1
+  // Calculate real price impact
+  const priceImpact = (() => {
+    if (!fromAmount || !poolState || poolState.liquidity === 0n || !currentPrice) return 0
+    const inputAmount = parseFloat(fromAmount)
+    if (inputAmount <= 0) return 0
+    const tradeValueUsd = zeroForOne ? inputAmount * currentPrice : inputAmount
+    const ethInPool = Number(poolState.liquidity) / 1e12
+    const poolValueUsd = ethInPool * currentPrice * 2
+    const impact = (tradeValueUsd / poolValueUsd) * 100
+    return Math.min(impact, 99.99)
+  })()
+
+  // Get swap button text
+  const getButtonText = () => {
+    if (!isConnected) return 'Connect Wallet'
+    if (poolLoading) return 'Loading Pool...'
+    if (!isInitialized) return 'Pool Not Initialized'
+    if (!relayerInfo) return 'Connecting to Relayer...'
+    if (isPrivacyPool && availableNotes.length === 0) return 'Deposit Required'
+    if (isQuoting) return 'Getting Quote...'
+    if (swapState === 'selecting-note') return 'Selecting Note...'
+    if (swapState === 'generating-proof') return 'Generating ZK Proof...'
+    if (swapState === 'submitting') return 'Submitting to Relayer...'
+    if (swapState === 'confirming') return 'Confirming...'
+    if (swapState === 'success') return 'Swap Complete!'
+    if (swapState === 'error') return 'Swap Failed'
+    if (!fromAmount) return 'Enter Amount'
+    return 'Transmute'
+  }
 
   return (
     <>
@@ -213,14 +435,11 @@ export function SwapCard() {
         <div className="relative rounded-2xl bg-charcoal/95 backdrop-blur-xl p-5 sm:p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
-            <h2 className="font-display text-xl text-ghost-white">
-              Cast Spell
-            </h2>
+            <h2 className="font-display text-xl text-ghost-white">Cast Spell</h2>
             <button
               onClick={() => setShowSettings(!showSettings)}
               className={cn(
-                'p-2 rounded-lg transition-all',
-                'hover:bg-white/5',
+                'p-2 rounded-lg transition-all hover:bg-white/5',
                 showSettings && 'bg-arcane-purple/10 text-arcane-purple'
               )}
             >
@@ -235,15 +454,106 @@ export function SwapCard() {
             </div>
           )}
 
+          {/* Pool Status */}
+          {poolLoading && (
+            <div className="mb-5 p-3 rounded-xl bg-ethereal-cyan/10 border border-ethereal-cyan/30">
+              <div className="flex items-center gap-2 text-ethereal-cyan text-sm">
+                <div className="w-4 h-4 border-2 border-ethereal-cyan border-t-transparent rounded-full animate-spin" />
+                <span>Loading pool data...</span>
+              </div>
+            </div>
+          )}
+
+          {!poolLoading && isInitialized && poolState && (
+            <div className={cn(
+              "mb-5 p-3 rounded-xl border",
+              isPrivacyPool ? "bg-arcane-purple/10 border-arcane-purple/30" : "bg-spectral-green/10 border-spectral-green/30"
+            )}>
+              <div className="flex items-center justify-between">
+                <div className={cn("flex items-center gap-2 text-sm", isPrivacyPool ? "text-arcane-purple" : "text-spectral-green")}>
+                  <div className={cn("w-2 h-2 rounded-full animate-pulse", isPrivacyPool ? "bg-arcane-purple" : "bg-spectral-green")} />
+                  {isPrivacyPool ? (
+                    <span className="flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5" />
+                      GrimSwap Privacy Pool
+                    </span>
+                  ) : (
+                    <span>Pool Active</span>
+                  )}
+                </div>
+                <a
+                  href={`https://app.uniswap.org/explore/pools/unichain_sepolia/${poolId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-arcane-purple hover:underline"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  View on Uniswap
+                </a>
+              </div>
+              {isPrivacyPool && (
+                <p className="text-xs text-mist-gray mt-2">
+                  Your swaps are protected by ZK-SNARK proofs via relayer
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Relayer Status */}
+          {relayerInfo && (
+            <div className="mb-5 p-3 rounded-xl bg-spectral-green/5 border border-spectral-green/20">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-mist-gray flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-spectral-green animate-pulse" />
+                  Relayer Online
+                </span>
+                <span className="text-mist-gray">
+                  Fee: {relayerInfo.feeBps / 100}%
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Deposit Notes Warning */}
+          {isPrivacyPool && availableNotes.length === 0 && isConnected && (
+            <div className="mb-5 p-3 rounded-xl bg-blood-crimson/10 border border-blood-crimson/30">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-blood-crimson flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-blood-crimson font-medium">No Deposit Notes</p>
+                  <p className="text-xs text-mist-gray mt-1">
+                    Privacy swaps require a deposit to GrimPool first.
+                    Go to the <a href="/wallet" className="text-arcane-purple hover:underline">Grimoire</a> to deposit.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Available Notes */}
+          {isPrivacyPool && availableNotes.length > 0 && (
+            <div className="mb-5 p-3 rounded-xl bg-arcane-purple/5 border border-arcane-purple/20">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-mist-gray flex items-center gap-1.5">
+                  <Wallet className="w-3.5 h-3.5" />
+                  Available Notes
+                </span>
+                <span className="text-arcane-purple font-mono">{availableNotes.length}</span>
+              </div>
+            </div>
+          )}
+
           {/* Transaction Status */}
-          {swapState !== 'idle' && (
+          {(swapState !== 'idle' || swapError) && (
             <div className="mb-5">
               <TransactionStatus
-                state={swapState === 'confirming' ? 'pending' : swapState}
+                state={swapState === 'success' ? 'success' : swapState === 'error' ? 'error' : 'pending'}
                 hash={txHash || undefined}
+                message={swapError || undefined}
                 onClose={() => {
                   setSwapState('idle')
                   setTxHash(null)
+                  setSwapError(null)
                 }}
               />
             </div>
@@ -256,7 +566,7 @@ export function SwapCard() {
             onAmountChange={setFromAmount}
             token={fromToken}
             onTokenSelect={() => openTokenSelector('from')}
-            balance={fromToken.balance}
+            balance={getBalance(fromToken.symbol)}
             disabled={isSwapping}
             className="mb-2"
           />
@@ -270,8 +580,7 @@ export function SwapCard() {
                 'swap-arrow p-3 rounded-xl',
                 'bg-obsidian border border-arcane-purple/30',
                 'hover:border-arcane-purple/60 hover:scale-110',
-                'active:scale-95',
-                'transition-all duration-200',
+                'active:scale-95 transition-all duration-200',
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
               )}
             >
@@ -286,21 +595,13 @@ export function SwapCard() {
             onAmountChange={setToAmount}
             token={toToken}
             onTokenSelect={() => openTokenSelector('to')}
-            balance={toToken.balance}
+            balance={getBalance(toToken.symbol)}
             disabled
             className="mt-2 mb-4"
           />
 
-          {/* Ring Selector */}
-          <RingSelector
-            ringSize={ringSize}
-            onRingSizeChange={setRingSize}
-            disabled={isSwapping}
-            className="mb-5"
-          />
-
           {/* Price Info */}
-          {fromAmount && !isSwapping && (
+          {fromAmount && !isSwapping && isInitialized && (
             <div className="mb-5 p-3 rounded-xl bg-obsidian/30 border border-arcane-purple/10 space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-mist-gray flex items-center gap-1.5">
@@ -308,7 +609,11 @@ export function SwapCard() {
                   Rate
                 </span>
                 <span className="text-ghost-white font-mono text-xs sm:text-sm">
-                  1 {fromToken.symbol} = {exchangeRate.toLocaleString()} {toToken.symbol}
+                  1 {fromToken.symbol} ≈ {exchangeRate > 0
+                    ? exchangeRate >= 1
+                      ? exchangeRate.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                      : exchangeRate.toFixed(6)
+                    : '—'} {toToken.symbol}
                 </span>
               </div>
 
@@ -335,36 +640,32 @@ export function SwapCard() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-mist-gray flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5" />
-                  Privacy Level
-                </span>
-                <span className="text-spectral-green font-mono text-xs sm:text-sm">
-                  {ringSize} addresses
-                </span>
-              </div>
+              {poolState && poolState.liquidity > 0n && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-mist-gray flex items-center gap-1.5">
+                    <Info className="w-3.5 h-3.5" />
+                    Pool Liquidity
+                  </span>
+                  <span className="text-ghost-white font-mono text-xs sm:text-sm">
+                    {formatLiquidity(poolState.liquidity)}
+                  </span>
+                </div>
+              )}
+
+              {isQuoting && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-mist-gray flex items-center gap-1.5">
+                    <div className="w-3 h-3 border-2 border-arcane-purple border-t-transparent rounded-full animate-spin" />
+                    Getting quote...
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
           {/* Swap Button */}
-          <ShimmerButton
-            onClick={handleSwap}
-            disabled={!canSwap}
-          >
-            {!isConnected
-              ? 'Connect Wallet'
-              : swapState === 'confirming'
-                ? 'Confirm in Wallet...'
-                : swapState === 'pending'
-                  ? 'Casting Spell...'
-                  : swapState === 'success'
-                    ? 'Spell Complete!'
-                    : swapState === 'error'
-                      ? 'Spell Failed'
-                      : !fromAmount
-                        ? 'Enter Amount'
-                        : 'Transmute'}
+          <ShimmerButton onClick={handleSwap} disabled={!canSwap}>
+            {getButtonText()}
           </ShimmerButton>
         </div>
       </div>

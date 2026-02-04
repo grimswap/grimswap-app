@@ -1,5 +1,7 @@
 export { SwapCard } from './swap-card'
 export { TokenInput } from './token-input'
 export { TokenSelectorModal, type Token } from './token-selector-modal'
-export { RingSelector } from './ring-selector'
 export { SettingsPanel } from './settings-panel'
+export { DepositCard } from './deposit-card'
+export { PoolInfo } from './pool-info'
+export { PoolStatistics } from './pool-statistics'
