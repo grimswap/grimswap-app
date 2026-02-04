@@ -1,0 +1,79 @@
+[
+  {
+    "type": "function",
+    "name": "modifyLiquidity",
+    "inputs": [
+      {
+        "name": "key",
+        "type": "tuple",
+        "components": [
+          { "name": "currency0", "type": "address" },
+          { "name": "currency1", "type": "address" },
+          { "name": "fee", "type": "uint24" },
+          { "name": "tickSpacing", "type": "int24" },
+          { "name": "hooks", "type": "address" }
+        ]
+      },
+      {
+        "name": "params",
+        "type": "tuple",
+        "components": [
+          { "name": "tickLower", "type": "int24" },
+          { "name": "tickUpper", "type": "int24" },
+          { "name": "liquidityDelta", "type": "int256" },
+          { "name": "salt", "type": "bytes32" }
+        ]
+      },
+      { "name": "hookData", "type": "bytes" },
+      { "name": "settleUsingBurn", "type": "bool" },
+      { "name": "takeClaims", "type": "bool" }
+    ],
+    "outputs": [
+      { "name": "delta", "type": "int256" }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "modifyLiquidity",
+    "inputs": [
+      {
+        "name": "key",
+        "type": "tuple",
+        "components": [
+          { "name": "currency0", "type": "address" },
+          { "name": "currency1", "type": "address" },
+          { "name": "fee", "type": "uint24" },
+          { "name": "tickSpacing", "type": "int24" },
+          { "name": "hooks", "type": "address" }
+        ]
+      },
+      {
+        "name": "params",
+        "type": "tuple",
+        "components": [
+          { "name": "tickLower", "type": "int24" },
+          { "name": "tickUpper", "type": "int24" },
+          { "name": "liquidityDelta", "type": "int256" },
+          { "name": "salt", "type": "bytes32" }
+        ]
+      },
+      { "name": "hookData", "type": "bytes" }
+    ],
+    "outputs": [
+      { "name": "delta", "type": "int256" }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "manager",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "address" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "receive",
+    "stateMutability": "payable"
+  }
+]
