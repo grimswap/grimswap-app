@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { usePublicClient, useChainId } from 'wagmi'
-import { type Address, type Log } from 'viem'
 import { MerkleTree, type MerkleProof } from '@/lib/zk'
 import { grimPoolConfig } from '@/lib/contracts'
 import {

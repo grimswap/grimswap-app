@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { type Address, parseEther, formatEther } from 'viem'
+import { type Address, parseEther } from 'viem'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,9 +9,9 @@ import { TokenSelectorModal } from './token-selector-modal'
 import { useGrimPool } from '@/hooks/use-grim-pool'
 import { useTokenPrice } from '@/hooks/use-token-price'
 import { serializeNote } from '@/lib/zk'
-import { ETH, USDC } from '@/lib/tokens'
+import { ETH } from '@/lib/tokens'
 import { cn } from '@/lib/utils'
-import { ArrowDown, Lock, Shield, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Lock, Shield, CheckCircle2, AlertCircle } from 'lucide-react'
 
 // ETH denominations
 const ETH_DENOMINATIONS = [

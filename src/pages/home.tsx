@@ -8,8 +8,8 @@ import { Shield, Eye, Zap, Lock } from 'lucide-react'
 const features = [
   {
     icon: Shield,
-    title: 'Ring Signatures',
-    description: 'Your transaction hides among multiple addresses, making it impossible to trace the true sender.',
+    title: 'Zero-Knowledge Proofs',
+    description: 'ZK-SNARK technology hides you among all depositors. Prove you deposited without revealing which one.',
   },
   {
     icon: Eye,
@@ -23,8 +23,8 @@ const features = [
   },
   {
     icon: Lock,
-    title: 'Zero Knowledge',
-    description: 'Prove your right to swap without revealing your identity.',
+    title: 'Relayer Network',
+    description: 'Relayers submit your transaction, hiding even your gas payment for complete privacy.',
   },
 ]
 
@@ -85,7 +85,7 @@ export function HomePage() {
           </h1>
 
           <p className="hero-element text-lg sm:text-xl text-mist-gray max-w-2xl mx-auto mb-8">
-            Privacy-preserving token swaps powered by ring signatures and stealth addresses.
+            Privacy-preserving token swaps powered by ZK-SNARK proofs and stealth addresses.
             Trade invisibly on Uniswap v4.
           </p>
 

@@ -22,7 +22,7 @@ export function useGrimPool() {
   const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
   const { saveNote } = useDepositNotes()
-  const { showToast } = useToast()
+  const { toast } = useToast()
 
   const [state, setState] = useState<DepositState>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -32,7 +32,7 @@ export function useGrimPool() {
    * Check token allowance
    */
   const checkAllowance = useCallback(
-    async (tokenAddress: Address, amount: bigint): Promise<bigint> => {
+    async (tokenAddress: Address, _amount: bigint): Promise<bigint> => {
       if (!publicClient || !address) return BigInt(0)
 
       try {
@@ -104,11 +104,7 @@ export function useGrimPool() {
         const allowance = await checkAllowance(tokenAddress, amount)
 
         if (allowance < amount) {
-          showToast({
-            type: 'info',
-            title: 'Approval Required',
-            message: 'Approving token spending...',
-          })
+          toast.info('Approval Required', 'Approving token spending...')
 
           const approvalHash = await approveToken(tokenAddress, amount)
 
@@ -119,11 +115,7 @@ export function useGrimPool() {
 
         // 3. Deposit to GrimPool
         setState('depositing')
-        showToast({
-          type: 'info',
-          title: 'Depositing',
-          message: 'Submitting deposit to GrimPool...',
-        })
+        toast.info('Depositing', 'Submitting deposit to GrimPool...')
 
         const hash = await walletClient.writeContract({
           ...grimPoolConfig,
@@ -142,7 +134,7 @@ export function useGrimPool() {
           eventName: 'Deposit',
         })
 
-        const depositLog = logs[0]
+        const depositLog = logs[0] as unknown as { args: { leafIndex: bigint } } | undefined
         if (!depositLog) {
           throw new Error('Deposit event not found in logs')
         }
@@ -156,11 +148,7 @@ export function useGrimPool() {
         await saveNote(note, tokenAddress, tokenSymbol)
 
         setState('success')
-        showToast({
-          type: 'success',
-          title: 'Deposit Successful',
-          message: `Deposited to leaf index ${leafIndex}`,
-        })
+        toast.success('Deposit Successful', `Deposited to leaf index ${leafIndex}`)
 
         return {
           note,
@@ -171,15 +159,11 @@ export function useGrimPool() {
         const message = err instanceof Error ? err.message : 'Deposit failed'
         setError(message)
         setState('error')
-        showToast({
-          type: 'error',
-          title: 'Deposit Failed',
-          message,
-        })
+        toast.error('Deposit Failed', message)
         return null
       }
     },
-    [address, walletClient, publicClient, checkAllowance, approveToken, saveNote, showToast]
+    [address, walletClient, publicClient, checkAllowance, approveToken, saveNote, toast]
   )
 
   /**
@@ -281,7 +265,7 @@ export function useWatchDeposits(onDeposit?: (data: any) => void) {
     ...grimPoolConfig,
     eventName: 'Deposit',
     onLogs(logs) {
-      logs.forEach((log) => {
+      logs.forEach((log: any) => {
         onDeposit?.(log.args)
       })
     },

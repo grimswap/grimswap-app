@@ -72,7 +72,6 @@ export class MerkleTree {
 
     // Build tree from leaves
     let currentLevel = [...this.leaves]
-    const leavesCount = currentLevel.length
 
     // Pad with zeros to next power of 2
     const capacity = 2 ** this.height

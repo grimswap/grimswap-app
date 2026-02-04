@@ -6,7 +6,6 @@ import {
   grimPoolConfig,
   DEFAULT_POOL_KEY,
   MIN_SQRT_PRICE,
-  MAX_SQRT_PRICE,
   type PoolKey,
 } from '@/lib/contracts'
 import { type SwapParams as ZKSwapParams } from '@/lib/zk'
@@ -86,10 +85,10 @@ export function useGrimSwap() {
   const { address, isConnected } = useAccount()
   const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
-  const { generateProof, progress: proofProgress } = useZKProof()
+  const { generateProof } = useZKProof()
   const { getProof: getMerkleProof, syncTree, getRoot, isSyncing } = useMerkleTree()
   const { notes, spendNote } = useDepositNotes()
-  const { showToast } = useToast()
+  const { toast } = useToast()
 
   const [state, setState] = useState<SwapState>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -134,11 +133,7 @@ export function useGrimSwap() {
 
         // Step 2: Sync Merkle tree
         setState('syncing-tree')
-        showToast({
-          type: 'info',
-          title: 'Syncing',
-          message: 'Synchronizing Merkle tree...',
-        })
+        toast.info('Syncing', 'Synchronizing Merkle tree...')
 
         await syncTree()
 
@@ -151,11 +146,7 @@ export function useGrimSwap() {
 
         // Step 4: Add root to GrimPool (testnet only)
         setState('adding-root')
-        showToast({
-          type: 'info',
-          title: 'Adding Root',
-          message: 'Adding Merkle root to GrimPool...',
-        })
+        toast.info('Adding Root', 'Adding Merkle root to GrimPool...')
 
         const rootBytes = toBytes32(merkleProof.root)
 
@@ -178,11 +169,7 @@ export function useGrimSwap() {
 
         // Step 5: Generate ZK proof
         setState('generating-proof')
-        showToast({
-          type: 'info',
-          title: 'Generating Proof',
-          message: 'Creating ZK-SNARK proof (~1-2 seconds)...',
-        })
+        toast.info('Generating Proof', 'Creating ZK-SNARK proof (~1-2 seconds)...')
 
         const zkSwapParams: ZKSwapParams = {
           recipient: params.recipient,
@@ -196,10 +183,7 @@ export function useGrimSwap() {
         const proofResult = await generateProof(
           depositNote,
           merkleProof,
-          zkSwapParams,
-          (stage, progress) => {
-            setProofStage(`${stage} (${Math.round(progress * 100)}%)`)
-          }
+          zkSwapParams
         )
 
         if (!proofResult) {
@@ -215,11 +199,7 @@ export function useGrimSwap() {
 
         // Step 7: Execute swap through PoolHelper
         setState('submitting')
-        showToast({
-          type: 'info',
-          title: 'Submitting',
-          message: 'Executing private swap...',
-        })
+        toast.info('Submitting', 'Executing private swap...')
 
         const poolKey = params.poolKey || DEFAULT_POOL_KEY
 
@@ -238,11 +218,7 @@ export function useGrimSwap() {
 
         // Step 8: Wait for confirmation
         setState('confirming')
-        showToast({
-          type: 'info',
-          title: 'Confirming',
-          message: 'Waiting for transaction confirmation...',
-        })
+        toast.info('Confirming', 'Waiting for transaction confirmation...')
 
         const receipt = await publicClient.waitForTransactionReceipt({ hash })
 
@@ -258,11 +234,7 @@ export function useGrimSwap() {
         setState('success')
         setTxHash(hash)
 
-        showToast({
-          type: 'success',
-          title: 'Swap Successful',
-          message: 'Your private swap completed successfully!',
-        })
+        toast.success('Swap Successful', 'Your private swap completed successfully!')
 
         return {
           hash,
@@ -275,11 +247,7 @@ export function useGrimSwap() {
         setError(message)
         setState('error')
 
-        showToast({
-          type: 'error',
-          title: 'Swap Failed',
-          message,
-        })
+        toast.error('Swap Failed', message)
 
         return null
       }
@@ -294,7 +262,7 @@ export function useGrimSwap() {
       getRoot,
       generateProof,
       spendNote,
-      showToast,
+      toast,
       reset,
     ]
   )

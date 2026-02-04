@@ -4,7 +4,7 @@
  * Stores deposit notes locally so users can prove ownership later
  */
 
-import { type DepositNote, serializeNote, deserializeNote } from '@/lib/zk'
+import { type DepositNote } from '@/lib/zk'
 
 const DB_NAME = 'grimswap-db'
 const DB_VERSION = 1
@@ -110,10 +110,12 @@ export async function getUnspentNotes(): Promise<StoredDepositNote[]> {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], 'readonly')
     const store = transaction.objectStore(STORE_NAME)
-    const index = store.index('spent')
-    const request = index.getAll(false)
+    const request = store.getAll()
 
-    request.onsuccess = () => resolve(request.result)
+    request.onsuccess = () => {
+      const allNotes = request.result as StoredDepositNote[]
+      resolve(allNotes.filter(note => !note.spent))
+    }
     request.onerror = () => reject(request.error)
 
     transaction.oncomplete = () => db.close()
@@ -129,10 +131,13 @@ export async function getNoteByCommitment(commitment: bigint): Promise<StoredDep
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], 'readonly')
     const store = transaction.objectStore(STORE_NAME)
-    const index = store.index('commitment')
-    const request = index.get(commitment)
+    const request = store.getAll()
 
-    request.onsuccess = () => resolve(request.result || null)
+    request.onsuccess = () => {
+      const allNotes = request.result as StoredDepositNote[]
+      const found = allNotes.find(note => note.commitment === commitment)
+      resolve(found || null)
+    }
     request.onerror = () => reject(request.error)
 
     transaction.oncomplete = () => db.close()
@@ -150,10 +155,13 @@ export async function getNoteByNullifierHash(
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], 'readonly')
     const store = transaction.objectStore(STORE_NAME)
-    const index = store.index('nullifierHash')
-    const request = index.get(nullifierHash)
+    const request = store.getAll()
 
-    request.onsuccess = () => resolve(request.result || null)
+    request.onsuccess = () => {
+      const allNotes = request.result as StoredDepositNote[]
+      const found = allNotes.find(note => note.nullifierHash === nullifierHash)
+      resolve(found || null)
+    }
     request.onerror = () => reject(request.error)
 
     transaction.oncomplete = () => db.close()

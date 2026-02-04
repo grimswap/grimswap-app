@@ -3,7 +3,6 @@
  */
 
 import { buildPoseidon } from 'circomlibjs'
-import type { Address } from 'viem'
 
 // Poseidon instance (initialized lazily)
 let poseidonInstance: any = null

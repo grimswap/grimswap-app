@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react'
-import type { Address } from 'viem'
 import {
   generateProofForRelayer,
   type DepositNote,

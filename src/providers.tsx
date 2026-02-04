@@ -5,7 +5,19 @@ import '@rainbow-me/rainbowkit/styles.css'
 import { wagmiConfig } from './lib/wagmi'
 import { SmoothScrollProvider } from './components/effects/smooth-scroll-provider'
 
-const queryClient = new QueryClient()
+// Configure query client with error handling
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Retry failed requests
+      retry: 1,
+      // Don't refetch on window focus for testnet
+      refetchOnWindowFocus: false,
+      // Silence errors for failed ENS lookups
+      throwOnError: false,
+    },
+  },
+})
 
 // GrimSwap arcane theme for RainbowKit
 const grimswapTheme: Theme = {
@@ -66,7 +78,13 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={grimswapTheme} modalSize="compact">
+        <RainbowKitProvider
+          theme={grimswapTheme}
+          modalSize="compact"
+          showRecentTransactions={false}
+          // Disable avatar fetching (causes ENS lookups)
+          avatar={undefined}
+        >
           <SmoothScrollProvider>
             {children}
           </SmoothScrollProvider>
