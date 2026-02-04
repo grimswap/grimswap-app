@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/grimoire.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="GrimSwap - The Dark Arts of DeFi. Privacy-preserving token swaps with ring signatures and stealth addresses." />
+    <meta name="description" content="GrimSwap - The Dark Arts of DeFi. Privacy-preserving token swaps with ZK-SNARK proofs and stealth addresses." />
     <meta name="theme-color" content="#050505" />
 
     <!-- Fonts -->
@@ -16,6 +16,42 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Buffer polyfill must load before any modules that use circomlibjs -->
+    <script>
+      // Minimal Buffer polyfill for browser
+      // This runs before ES modules load
+      if (typeof window.Buffer === 'undefined') {
+        window.Buffer = {
+          from: function(data, encoding) {
+            if (typeof data === 'string') {
+              if (encoding === 'hex') {
+                var bytes = [];
+                for (var i = 0; i < data.length; i += 2) {
+                  bytes.push(parseInt(data.substr(i, 2), 16));
+                }
+                return new Uint8Array(bytes);
+              }
+              return new TextEncoder().encode(data);
+            }
+            return new Uint8Array(data);
+          },
+          alloc: function(size) { return new Uint8Array(size); },
+          allocUnsafe: function(size) { return new Uint8Array(size); },
+          isBuffer: function(obj) { return obj instanceof Uint8Array; },
+          concat: function(list) {
+            var totalLength = list.reduce(function(acc, buf) { return acc + buf.length; }, 0);
+            var result = new Uint8Array(totalLength);
+            var offset = 0;
+            list.forEach(function(buf) {
+              result.set(buf, offset);
+              offset += buf.length;
+            });
+            return result;
+          }
+        };
+        window.global = window;
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
