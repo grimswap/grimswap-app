@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { parseEther, parseUnits } from 'viem'
-import { useAccount } from 'wagmi'
+import { useAccount, usePublicClient } from 'wagmi'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-import { Droplets, Plus, Shield, AlertCircle, ExternalLink, Loader2, TrendingUp, Activity, Coins, PieChart, BarChart3 } from 'lucide-react'
+import { Droplets, Plus, Shield, AlertCircle, ExternalLink, Loader2, TrendingUp, Activity, Coins, PieChart, BarChart3, RefreshCw } from 'lucide-react'
 import { CONTRACTS, ETH_USDC_POOL_KEY, ETH_USDC_GRIMSWAP_POOL_KEY, type PoolKey } from '@/lib/contracts'
 import { ETH, USDC } from '@/lib/tokens'
 import { useStateView } from '@/hooks/use-state-view'
@@ -56,10 +56,17 @@ interface PoolStatsModalProps {
 }
 
 function PoolStatsModal({ isOpen, onClose, pool }: PoolStatsModalProps) {
-  const { poolState, currentPrice } = useStateView(
+  const { poolState, currentPrice, refetch, isLoading } = useStateView(
     pool?.poolKey ?? ETH_USDC_POOL_KEY
     // useKnownPoolId defaults to true - uses verified known pool IDs
   )
+
+  // Auto-refresh every 10 seconds when modal is open
+  useEffect(() => {
+    if (!isOpen) return
+    const interval = setInterval(() => refetch(), 10000)
+    return () => clearInterval(interval)
+  }, [isOpen, refetch])
 
   if (!pool) return null
 
@@ -68,26 +75,37 @@ function PoolStatsModal({ isOpen, onClose, pool }: PoolStatsModalProps) {
   const liquidity = poolState?.liquidity ?? 0n
   const sqrtPriceX96 = poolState?.slot0?.sqrtPriceX96 ?? 0n
 
-  // Estimate ETH reserve (token0)
-  // Based on how liquidity was calculated in use-liquidity.ts:
-  // liquidityDelta = amount0 (ETH in wei) / 10^6
-  // Therefore: amount0 (ETH in wei) = liquidity * 10^6
+  // Estimate virtual reserves using Uniswap v3/v4 concentrated liquidity formula
+  // For concentrated liquidity: L = sqrt(x * y) at current price
+  // Virtual reserves: x = L / sqrt(P), y = L * sqrt(P)
+  // where P is the raw price (token1/token0 adjusted for decimals)
   const estimateReserves = () => {
     if (liquidity === 0n || sqrtPriceX96 === 0n) {
       return { ethReserve: 0, usdcReserve: 0 }
     }
 
     const liqNum = Number(liquidity)
-
-    // Reverse the liquidity calculation to estimate ETH
-    // liquidity = ETH_wei / 10^6, so ETH_wei = liquidity * 10^6
-    // ETH = ETH_wei / 10^18 = liquidity * 10^6 / 10^18 = liquidity / 10^12
-    const ethReserve = liqNum / 1e12
-
-    // Estimate USDC using the current pool price
-    // USDC = ETH * price
     const priceInUsdc = currentPrice ?? 0
-    const usdcReserve = ethReserve * priceInUsdc
+
+    if (priceInUsdc <= 0) {
+      return { ethReserve: 0, usdcReserve: 0 }
+    }
+
+    // Convert price to raw ratio (accounting for decimal difference)
+    // price is USDC per ETH (e.g., 4000)
+    // raw_price = price * 10^6 / 10^18 = price / 10^12
+    const rawPrice = priceInUsdc / 1e12
+    const sqrtRawPrice = Math.sqrt(rawPrice)
+
+    // Virtual reserves in raw units:
+    // x (ETH in wei) = L / sqrt(rawPrice)
+    // y (USDC in smallest units) = L * sqrt(rawPrice)
+    const ethReserveWei = liqNum / sqrtRawPrice
+    const usdcReserveUnits = liqNum * sqrtRawPrice
+
+    // Convert to human-readable
+    const ethReserve = ethReserveWei / 1e18
+    const usdcReserve = usdcReserveUnits / 1e6
 
     return { ethReserve, usdcReserve }
   }
@@ -157,6 +175,15 @@ function PoolStatsModal({ isOpen, onClose, pool }: PoolStatsModalProps) {
               {pool.hasPrivacy ? 'GrimSwap Privacy Pool' : 'Standard Uniswap v4'}
             </p>
           </div>
+          {/* Refresh Button */}
+          <button
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="ml-auto p-2 rounded-lg bg-charcoal hover:bg-arcane-purple/20 transition-colors disabled:opacity-50"
+            title="Refresh pool data"
+          >
+            <RefreshCw className={`w-4 h-4 text-mist-gray ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
 
         {/* Current Price Banner */}
@@ -462,9 +489,11 @@ interface AddLiquidityModalProps {
 
 function AddLiquidityModal({ isOpen, onClose, pool }: AddLiquidityModalProps) {
   const { isConnected } = useAccount()
+  const publicClient = usePublicClient()
   const [ethAmount, setEthAmount] = useState('')
   const [usdcAmount, setUsdcAmount] = useState('')
   const [initPrice, setInitPrice] = useState('2500') // Default ETH price in USDC
+  const [isWaitingConfirmation, setIsWaitingConfirmation] = useState(false)
 
   const { formatted: ethBalance } = useNativeBalance()
   const { formatted: usdcBalance } = useTokenBalance(USDC.address)
@@ -613,15 +642,28 @@ function AddLiquidityModal({ isOpen, onClose, pool }: AddLiquidityModalProps) {
     })
 
     if (tx) {
-      // Success - clear form
-      setEthAmount('')
-      setUsdcAmount('')
-      // Refetch pool state
-      setTimeout(() => refetch(), 2000)
+      // Wait for transaction confirmation before refetching
+      setIsWaitingConfirmation(true)
+      try {
+        if (publicClient) {
+          await publicClient.waitForTransactionReceipt({ hash: tx })
+        }
+        // Success - clear form
+        setEthAmount('')
+        setUsdcAmount('')
+        // Refetch pool state after confirmation
+        refetch()
+        // Refetch again after a short delay to ensure state is updated
+        setTimeout(() => refetch(), 3000)
+      } catch (err) {
+        console.error('Error waiting for confirmation:', err)
+      } finally {
+        setIsWaitingConfirmation(false)
+      }
     }
   }
 
-  const isLoading = isInitializing || isApproving || isAddingLiquidity
+  const isLoading = isInitializing || isApproving || isAddingLiquidity || isWaitingConfirmation
   const canAdd = isConnected && ethAmount && usdcAmount && !isLoading && isInitialized
   const canInitialize = isConnected && !isLoading && !isInitialized && pool?.hasPrivacy
 
@@ -849,6 +891,11 @@ function AddLiquidityModal({ isOpen, onClose, pool }: AddLiquidityModalProps) {
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Adding Liquidity...
+              </>
+            ) : isWaitingConfirmation ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Waiting for Confirmation...
               </>
             ) : (
               <>
