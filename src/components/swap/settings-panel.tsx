@@ -57,7 +57,7 @@ export function SettingsPanel() {
                 'flex-1 px-3 py-2 rounded-lg text-sm font-medium',
                 'border transition-all',
                 currentSlippage === value && !showCustomSlippage
-                  ? 'bg-arcane-purple/20 border-arcane-purple text-arcane-purple'
+                  ? 'bg-arcane-purple/20 border-arcane-purple text-ethereal-cyan'
                   : 'bg-charcoal border-mist-gray/20 text-mist-gray hover:border-arcane-purple/40'
               )}
             >
@@ -131,7 +131,7 @@ export function SettingsPanel() {
                 'flex-1 px-3 py-2 rounded-lg text-sm font-medium',
                 'border transition-all',
                 settings.swap.transactionDeadline === value
-                  ? 'bg-arcane-purple/20 border-arcane-purple text-arcane-purple'
+                  ? 'bg-arcane-purple/20 border-arcane-purple text-ethereal-cyan'
                   : 'bg-charcoal border-mist-gray/20 text-mist-gray hover:border-arcane-purple/40'
               )}
             >

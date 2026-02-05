@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { GrimConnectButton } from '../web3/connect-button'
-import { BookOpen, ArrowLeftRight, Droplets, Wallet, Menu, X } from 'lucide-react'
+import { ArrowLeftRight, Droplets, Wallet, Menu, X } from 'lucide-react'
 import { useState } from 'react'
 
 const navLinks = [
@@ -15,26 +15,25 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-void-black/80 backdrop-blur-xl">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-void-black/60 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className={cn(
           'flex items-center justify-between h-20',
-          'border-b border-arcane-purple/10'
+          'border-b border-grim-pink/10'
         )}>
           {/* Logo */}
           <Link
             to="/"
             className="flex items-center gap-3 group"
           >
-            <div className={cn(
-              'w-10 h-10 rounded-xl',
-              'bg-gradient-to-br from-arcane-purple to-purple-deep',
-              'flex items-center justify-center',
-              'shadow-glow-purple',
-              'group-hover:scale-105 transition-transform'
-            )}>
-              <BookOpen className="w-5 h-5 text-ghost-white" />
-            </div>
+            <img
+              src="/grimoire.svg"
+              alt="GrimSwap"
+              className="w-10 h-10 group-hover:scale-105 transition-transform"
+              style={{
+                filter: 'drop-shadow(0 0 10px rgba(0, 237, 218, 0.4))',
+              }}
+            />
             <span className="font-display text-xl text-ghost-white hidden sm:block">
               GrimSwap
             </span>
@@ -54,7 +53,7 @@ export function Header() {
                     'flex items-center gap-2 px-4 py-2 rounded-xl',
                     'text-sm font-medium transition-all duration-200',
                     isActive
-                      ? 'bg-arcane-purple/20 text-arcane-purple'
+                      ? 'bg-ethereal-cyan/20 text-ethereal-cyan'
                       : 'text-mist-gray hover:text-ghost-white hover:bg-white/5'
                   )}
                 >
@@ -65,8 +64,9 @@ export function Header() {
             })}
           </nav>
 
-          {/* Connect Button */}
-          <div className="flex items-center gap-4">
+          {/* Right side buttons */}
+          <div className="flex items-center gap-3">
+            {/* Connect Button */}
             <GrimConnectButton />
 
             {/* Mobile Menu Button */}
@@ -85,7 +85,7 @@ export function Header() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-b border-arcane-purple/10">
+          <div className="md:hidden py-4 border-b border-grim-pink/10">
             <nav className="flex flex-col gap-2">
               {navLinks.map((link) => {
                 const Icon = link.icon
@@ -100,7 +100,7 @@ export function Header() {
                       'flex items-center gap-3 px-4 py-3 rounded-xl',
                       'text-sm font-medium transition-all',
                       isActive
-                        ? 'bg-arcane-purple/20 text-arcane-purple'
+                        ? 'bg-ethereal-cyan/20 text-ethereal-cyan'
                         : 'text-mist-gray hover:text-ghost-white hover:bg-white/5'
                     )}
                   >

@@ -122,7 +122,7 @@ export function RingVisualization() {
           disabled={matchState !== 'idle'}
           className={cn(
             'px-3 py-1 rounded-lg text-xs',
-            'bg-arcane-purple/20 text-arcane-purple',
+            'bg-arcane-purple/20 text-ethereal-cyan',
             'hover:bg-arcane-purple/30 transition-colors',
             'disabled:opacity-50 disabled:cursor-not-allowed'
           )}
@@ -208,7 +208,7 @@ export function RingVisualization() {
           {matchState === 'proving' ? (
             <>
               <div className="w-12 h-12 rounded-full border-2 border-arcane-purple border-t-transparent animate-spin" />
-              <span className="text-xs font-mono text-arcane-purple mt-1">{proofProgress}%</span>
+              <span className="text-xs font-mono text-ethereal-cyan mt-1">{proofProgress}%</span>
             </>
           ) : (
             <>

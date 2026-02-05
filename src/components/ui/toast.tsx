@@ -36,7 +36,7 @@ const iconStyles = {
   success: 'text-spectral-green',
   error: 'text-blood-crimson',
   warning: 'text-ethereal-cyan',
-  info: 'text-arcane-purple',
+  info: 'text-ethereal-cyan',
 }
 
 function Toast({ id, type, title, description, duration = 5000, onClose }: ToastProps) {

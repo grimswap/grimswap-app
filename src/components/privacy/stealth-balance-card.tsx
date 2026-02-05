@@ -105,7 +105,7 @@ export function StealthBalanceCard({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-arcane-purple/10">
         <div className="flex items-center gap-2">
-          <Scan className="w-5 h-5 text-arcane-purple" />
+          <Scan className="w-5 h-5 text-ethereal-cyan" />
           <h3 className="font-display text-lg text-ghost-white">
             Stealth Balances
           </h3>
@@ -215,7 +215,7 @@ export function StealthBalanceCard({
             className={cn(
               'flex items-center gap-2 px-6 py-3 rounded-xl',
               'bg-arcane-purple/20 border border-arcane-purple/50',
-              'text-arcane-purple font-medium',
+              'text-ethereal-cyan font-medium',
               'hover:bg-arcane-purple/30 hover:border-arcane-purple/70',
               'transition-all duration-200',
               'shadow-[0_0_20px_rgba(139,92,246,0.2)]'

@@ -339,7 +339,7 @@ export function WalletPage() {
     return (
       <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4">
         <div className="text-center">
-          <Wallet className="w-16 h-16 text-arcane-purple/50 mx-auto mb-4" />
+          <Wallet className="w-16 h-16 text-ethereal-cyan/50 mx-auto mb-4" />
           <h2 className="font-display text-2xl text-ghost-white mb-2">
             Connect Your Wallet
           </h2>
@@ -380,7 +380,7 @@ export function WalletPage() {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-arcane-purple/20">
-                  <Wallet className="w-5 h-5 text-arcane-purple" />
+                  <Wallet className="w-5 h-5 text-ethereal-cyan" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs text-mist-gray mb-0.5">Connected</p>
@@ -447,7 +447,7 @@ export function WalletPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
-                <Lock className="w-5 h-5 text-arcane-purple" />
+                <Lock className="w-5 h-5 text-ethereal-cyan" />
                 <h2 className="font-display text-lg text-ghost-white">
                   Deposit Notes
                 </h2>
@@ -549,7 +549,7 @@ export function WalletPage() {
                               <span>{formatDate(note.createdAt)}</span>
                               {note.leafIndex !== undefined && (
                                 <>
-                                  <span className="text-arcane-purple/50">•</span>
+                                  <span className="text-ethereal-cyan/50">•</span>
                                   <span>Leaf #{note.leafIndex}</span>
                                 </>
                               )}
@@ -739,7 +739,7 @@ export function WalletPage() {
                                     setCopiedStealthId(stealth.id)
                                     setTimeout(() => setCopiedStealthId(null), 2000)
                                   }}
-                                  className="font-mono text-sm text-ghost-white truncate hover:text-arcane-purple transition-colors flex items-center gap-1"
+                                  className="font-mono text-sm text-ghost-white truncate hover:text-ethereal-cyan transition-colors flex items-center gap-1"
                                   title={`Click to copy: ${stealth.address}`}
                                 >
                                   {stealth.address.slice(0, 8)}...{stealth.address.slice(-6)}
@@ -770,13 +770,13 @@ export function WalletPage() {
                                 </span>
                                 {!stealth.claimed && (
                                   <>
-                                    <span className="text-arcane-purple/50">•</span>
+                                    <span className="text-ethereal-cyan/50">•</span>
                                     <span className="font-mono">{parseFloat(ethBal).toFixed(5)} ETH</span>
-                                    <span className="text-arcane-purple/50">•</span>
+                                    <span className="text-ethereal-cyan/50">•</span>
                                     <span className="font-mono text-spectral-green">{parseFloat(usdcBal).toFixed(2)} USDC</span>
                                     {totalUsdValue > 0 && (
                                       <>
-                                        <span className="text-arcane-purple/50">•</span>
+                                        <span className="text-ethereal-cyan/50">•</span>
                                         <span className="font-mono text-ethereal-cyan">≈ ${totalUsdValue.toFixed(2)}</span>
                                       </>
                                     )}
@@ -835,7 +835,7 @@ export function WalletPage() {
                                   href={`https://sepolia.uniscan.xyz/tx/${stealth.claimTxHash}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="text-arcane-purple hover:underline flex items-center gap-1"
+                                  className="text-ethereal-cyan hover:underline flex items-center gap-1"
                                 >
                                   View
                                   <ExternalLink className="w-3 h-3" />
@@ -929,7 +929,7 @@ export function WalletPage() {
                             href={`https://unichain-sepolia.blockscout.com/tx/${note.depositTxHash}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-arcane-purple hover:underline flex items-center gap-1"
+                            className="text-xs text-ethereal-cyan hover:underline flex items-center gap-1"
                           >
                             View
                             <ExternalLink className="w-3 h-3" />
@@ -1007,7 +1007,7 @@ export function WalletPage() {
               />
               <button
                 onClick={() => setDepositAmount(ethBalance)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-arcane-purple hover:text-arcane-purple/80"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ethereal-cyan hover:text-ethereal-cyan/80"
               >
                 MAX
               </button>
@@ -1017,9 +1017,9 @@ export function WalletPage() {
           {/* Info */}
           <div className="p-3 rounded-xl bg-arcane-purple/10 border border-arcane-purple/20">
             <div className="flex items-start gap-2">
-              <Shield className="w-4 h-4 text-arcane-purple flex-shrink-0 mt-0.5" />
+              <Shield className="w-4 h-4 text-ethereal-cyan flex-shrink-0 mt-0.5" />
               <div className="text-xs text-mist-gray">
-                <p className="text-arcane-purple font-medium mb-1">How it works</p>
+                <p className="text-ethereal-cyan font-medium mb-1">How it works</p>
                 <p>
                   Your deposit creates a cryptographic commitment stored on-chain. A secret
                   note is saved locally that proves your ownership. Keep this note safe!
@@ -1223,9 +1223,9 @@ export function WalletPage() {
               {/* Privacy Note */}
               <div className="p-3 rounded-xl bg-arcane-purple/10 border border-arcane-purple/20">
                 <div className="flex items-start gap-2">
-                  <Shield className="w-4 h-4 text-arcane-purple flex-shrink-0 mt-0.5" />
+                  <Shield className="w-4 h-4 text-ethereal-cyan flex-shrink-0 mt-0.5" />
                   <div className="text-xs text-mist-gray">
-                    <p className="text-arcane-purple font-medium mb-1">Privacy Note</p>
+                    <p className="text-ethereal-cyan font-medium mb-1">Privacy Note</p>
                     <p>
                       This transaction will transfer USDC from the stealth address to your destination.
                       The stealth address has been funded with ETH for gas by the relayer.

@@ -127,7 +127,7 @@ export function TransactionHistory() {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 text-arcane-purple animate-spin" />
+            <Loader2 className="w-6 h-6 text-ethereal-cyan animate-spin" />
           </div>
         </CardContent>
       </Card>

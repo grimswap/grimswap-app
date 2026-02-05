@@ -34,7 +34,13 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
 
     gsap.ticker.lagSmoothing(0)
 
+    // Refresh ScrollTrigger after initial render to catch elements already in viewport
+    const refreshTimeout = setTimeout(() => {
+      ScrollTrigger.refresh()
+    }, 100)
+
     return () => {
+      clearTimeout(refreshTimeout)
       lenis.destroy()
     }
   }, [])

@@ -8,12 +8,29 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="relative min-h-screen bg-void-black flex flex-col">
-      {/* Background gradient */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-radial from-arcane-purple/5 via-transparent to-transparent" />
-        <div className="absolute top-0 right-0 w-1/2 h-1/2 bg-gradient-radial from-ethereal-cyan/5 via-transparent to-transparent" />
-        <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-gradient-radial from-spectral-green/3 via-transparent to-transparent" />
+    <div className="relative min-h-screen flex flex-col">
+      {/* Main background gradient from design */}
+      <div
+        className="fixed inset-0"
+        style={{
+          background: 'linear-gradient(180deg, #121214 5%, #33082A 32%, #36082B 99%)',
+        }}
+      />
+
+      {/* Background images - left and right */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {/* Left background image */}
+        <img
+          src="/assets/img/bg-left.png"
+          alt=""
+          className="absolute left-0 top-0 h-full w-auto object-cover object-left opacity-60"
+        />
+        {/* Right background image */}
+        <img
+          src="/assets/img/bg-right.png"
+          alt=""
+          className="absolute right-0 top-0 h-full w-auto object-cover object-right opacity-60"
+        />
       </div>
 
       {/* Noise texture */}

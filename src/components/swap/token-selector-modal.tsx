@@ -91,7 +91,7 @@ export function TokenSelectorModal({
                     {token.symbol}
                   </span>
                   {isSelected && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-arcane-purple/20 text-arcane-purple">
+                    <span className="text-xs px-2 py-0.5 rounded bg-arcane-purple/20 text-ethereal-cyan">
                       Selected
                     </span>
                   )}

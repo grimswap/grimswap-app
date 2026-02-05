@@ -61,7 +61,7 @@ export function TransactionStatus({
           className="w-8 h-8 border-2 border-arcane-purple border-t-transparent rounded-full"
         />
       ),
-      color: 'text-arcane-purple',
+      color: 'text-ethereal-cyan',
       borderColor: 'border-arcane-purple/30 shadow-glow-purple',
       label: 'Casting spell...',
       description: 'Your transaction is being confirmed',
@@ -107,7 +107,7 @@ export function TransactionStatus({
                 href={`${explorerUrl}/tx/${hash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-arcane-purple hover:text-arcane-purple/80 transition-colors"
+                className="text-ethereal-cyan hover:text-ethereal-cyan/80 transition-colors"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
@@ -164,7 +164,7 @@ export function TransactionTimeline({ steps }: TransactionTimelineProps) {
                 <CheckCircle className="w-4 h-4 text-void-black" />
               )}
               {step.status === 'active' && (
-                <Loader2 className="w-4 h-4 text-arcane-purple animate-spin" />
+                <Loader2 className="w-4 h-4 text-ethereal-cyan animate-spin" />
               )}
               {step.status === 'pending' && (
                 <span className="text-xs text-mist-gray">{index + 1}</span>

@@ -199,7 +199,7 @@ function PoolStatsModal({ isOpen, onClose, pool }: PoolStatsModalProps) {
           {/* TVL */}
           <div className="p-4 rounded-xl bg-charcoal/50 border border-arcane-purple/10">
             <div className="flex items-center gap-2 mb-2">
-              <Coins className="w-4 h-4 text-arcane-purple" />
+              <Coins className="w-4 h-4 text-ethereal-cyan" />
               <span className="text-xs text-mist-gray">Total Value Locked</span>
             </div>
             <p className="text-lg font-mono text-ghost-white">
@@ -408,7 +408,7 @@ function PoolRow({ pool, onAddLiquidity, onViewStats }: { pool: PoolInfo; onAddL
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-medium text-ghost-white group-hover:text-arcane-purple transition-colors">
+                <span className="font-medium text-ghost-white group-hover:text-ethereal-cyan transition-colors">
                   {pool.token0}/{pool.token1}
                 </span>
                 <span className="text-xs px-1.5 py-0.5 rounded bg-charcoal text-mist-gray">
@@ -712,7 +712,7 @@ function AddLiquidityModal({ isOpen, onClose, pool }: AddLiquidityModalProps) {
         {pool?.hasPrivacy && !isInitialized && (
           <div className="p-4 rounded-lg bg-arcane-purple/10 border border-arcane-purple/30 space-y-3">
             <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-arcane-purple flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-ethereal-cyan flex-shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-ghost-white">Pool Needs Initialization</p>
                 <p className="text-xs text-mist-gray mt-1">
@@ -789,7 +789,7 @@ function AddLiquidityModal({ isOpen, onClose, pool }: AddLiquidityModalProps) {
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
               <button
                 onClick={() => handleEthChange(ethBalance)}
-                className="text-xs text-arcane-purple hover:text-arcane-purple/80"
+                className="text-xs text-ethereal-cyan hover:text-ethereal-cyan/80"
               >
                 MAX
               </button>
@@ -824,7 +824,7 @@ function AddLiquidityModal({ isOpen, onClose, pool }: AddLiquidityModalProps) {
             <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
               <button
                 onClick={() => handleUsdcChange(usdcBalance)}
-                className="text-xs text-arcane-purple hover:text-arcane-purple/80"
+                className="text-xs text-ethereal-cyan hover:text-ethereal-cyan/80"
               >
                 MAX
               </button>
@@ -1005,7 +1005,7 @@ export function PoolsPage() {
         {/* Info Banner */}
         <div className="pool-element p-4 rounded-xl bg-arcane-purple/10 border border-arcane-purple/20">
           <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-arcane-purple flex-shrink-0 mt-0.5" />
+            <Shield className="w-5 h-5 text-ethereal-cyan flex-shrink-0 mt-0.5" />
             <div>
               <h3 className="font-medium text-ghost-white mb-1">GrimSwap Privacy Pools</h3>
               <p className="text-sm text-mist-gray">

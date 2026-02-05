@@ -9,22 +9,33 @@
    ============================================ */
 
 @theme {
-  /* ========== Core Palette ========== */
-  --color-void-black: oklch(0% 0 0);
-  --color-obsidian: oklch(7% 0 0);
-  --color-charcoal: oklch(12% 0 0);
-  --color-shadow-gray: oklch(15% 0 0);
+  /* ========== Core Palette (from design) ========== */
+  --color-void-black: #121214;
+  --color-obsidian: #1a0a18;
+  --color-charcoal: #2a1428;
+  --color-shadow-gray: #33082A;
+  --color-deep-purple: #36082B;
 
-  /* ========== Accent Colors ========== */
-  --color-arcane-purple: oklch(58% 0.22 285);
-  --color-purple-deep: oklch(45% 0.25 285);
-  --color-spectral-green: oklch(85% 0.3 155);
-  --color-ethereal-cyan: oklch(80% 0.2 200);
+  /* ========== Primary Accent - Pink/Magenta ========== */
+  --color-grim-pink: #A4238B;
+  --color-grim-pink-light: #c42aa8;
+  --color-grim-pink-dark: #7a1a68;
+
+  /* ========== Secondary Accent - Cyan/Teal ========== */
+  --color-grim-cyan: #00EDDA;
+  --color-grim-cyan-light: #33f2e3;
+  --color-grim-cyan-dark: #00bfaf;
+
+  /* ========== Legacy Colors (for compatibility) ========== */
+  --color-arcane-purple: #A4238B;
+  --color-purple-deep: #7a1a68;
+  --color-spectral-green: #00EDDA;
+  --color-ethereal-cyan: #00EDDA;
   --color-blood-crimson: oklch(60% 0.25 15);
 
   /* ========== Neutrals ========== */
-  --color-ghost-white: oklch(97% 0 0);
-  --color-mist-gray: oklch(70% 0.01 250);
+  --color-ghost-white: #ffffff;
+  --color-mist-gray: #9ca3af;
 
   /* ========== Typography - Arcane Fonts ========== */
   --font-sans: 'Crimson Text', Georgia, serif;
@@ -140,15 +151,23 @@
 @layer components {
   /* ========== Gradient Text ========== */
   .text-gradient-arcane {
-    @apply bg-linear-to-r from-arcane-purple via-ethereal-cyan to-spectral-green bg-clip-text text-transparent;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, #A4238B, #00EDDA);
+  }
+
+  .text-gradient-cyan {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, #00EDDA, #00bfaf);
   }
 
   .text-gradient-spectral {
-    @apply bg-linear-to-r from-spectral-green to-ethereal-cyan bg-clip-text text-transparent;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, #00EDDA, #33f2e3);
   }
 
   .text-gradient-purple {
-    @apply bg-linear-to-r from-arcane-purple to-purple-deep bg-clip-text text-transparent;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(90deg, #A4238B, #c42aa8);
   }
 
   /* ========== Glass Effects ========== */
@@ -222,24 +241,44 @@
   }
 
   /* ========== Glow Buttons ========== */
+  .btn-glow-pink {
+    @apply relative;
+    box-shadow: 0 0 20px rgba(164, 35, 139, 0.4);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .btn-glow-pink:hover {
+    box-shadow: 0 0 30px rgba(164, 35, 139, 0.6), 0 0 60px rgba(164, 35, 139, 0.3);
+  }
+
   .btn-glow-purple {
     @apply relative;
-    box-shadow: 0 0 20px oklch(58% 0.22 285 / 0.3);
+    box-shadow: 0 0 20px rgba(164, 35, 139, 0.3);
     transition: box-shadow 0.3s ease;
   }
 
   .btn-glow-purple:hover {
-    box-shadow: 0 0 30px oklch(58% 0.22 285 / 0.5), 0 0 60px oklch(58% 0.22 285 / 0.2);
+    box-shadow: 0 0 30px rgba(164, 35, 139, 0.5), 0 0 60px rgba(164, 35, 139, 0.2);
+  }
+
+  .btn-glow-cyan {
+    @apply relative;
+    box-shadow: 0 0 20px rgba(0, 237, 218, 0.3);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .btn-glow-cyan:hover {
+    box-shadow: 0 0 30px rgba(0, 237, 218, 0.5), 0 0 60px rgba(0, 237, 218, 0.2);
   }
 
   .btn-glow-green {
     @apply relative;
-    box-shadow: 0 0 20px oklch(85% 0.3 155 / 0.3);
+    box-shadow: 0 0 20px rgba(0, 237, 218, 0.3);
     transition: box-shadow 0.3s ease;
   }
 
   .btn-glow-green:hover {
-    box-shadow: 0 0 30px oklch(85% 0.3 155 / 0.5), 0 0 60px oklch(85% 0.3 155 / 0.2);
+    box-shadow: 0 0 30px rgba(0, 237, 218, 0.5), 0 0 60px rgba(0, 237, 218, 0.2);
   }
 
   /* ========== Ring Orbit Animation ========== */
@@ -337,20 +376,24 @@
   }
 
   /* ========== Shadow Glow Utilities ========== */
+  .shadow-glow-pink {
+    box-shadow: 0 0 20px rgba(164, 35, 139, 0.4);
+  }
+
   .shadow-glow-purple {
-    box-shadow: 0 0 20px oklch(58% 0.22 285 / 0.4);
+    box-shadow: 0 0 20px rgba(164, 35, 139, 0.4);
   }
 
   .shadow-glow-green {
-    box-shadow: 0 0 20px oklch(85% 0.3 155 / 0.4);
+    box-shadow: 0 0 20px rgba(0, 237, 218, 0.4);
   }
 
   .shadow-glow-cyan {
-    box-shadow: 0 0 20px oklch(80% 0.2 200 / 0.4);
+    box-shadow: 0 0 20px rgba(0, 237, 218, 0.4);
   }
 
   .shadow-glow-crimson {
-    box-shadow: 0 0 20px oklch(60% 0.25 15 / 0.4);
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
   }
 
   /* ========== Gradient Border ========== */
@@ -393,16 +436,20 @@
   }
 
   /* ========== Text Glow ========== */
+  .text-glow-pink {
+    text-shadow: 0 0 20px rgba(164, 35, 139, 0.5);
+  }
+
   .text-glow-purple {
-    text-shadow: 0 0 20px oklch(58% 0.22 285 / 0.5);
+    text-shadow: 0 0 20px rgba(164, 35, 139, 0.5);
   }
 
   .text-glow-green {
-    text-shadow: 0 0 20px oklch(85% 0.3 155 / 0.5);
+    text-shadow: 0 0 20px rgba(0, 237, 218, 0.5);
   }
 
   .text-glow-cyan {
-    text-shadow: 0 0 20px oklch(80% 0.2 200 / 0.5);
+    text-shadow: 0 0 20px rgba(0, 237, 218, 0.5);
   }
 
   /* ========== Hide Scrollbar ========== */

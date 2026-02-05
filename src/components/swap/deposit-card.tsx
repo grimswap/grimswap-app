@@ -81,7 +81,7 @@ export function DepositCard() {
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-arcane-purple/20 border border-arcane-purple/30 flex items-center justify-center">
-            <Lock className="w-5 h-5 text-arcane-purple" />
+            <Lock className="w-5 h-5 text-ethereal-cyan" />
           </div>
           <div>
             <h3 className="font-display text-lg text-ghost-white">Private Deposit</h3>
@@ -145,7 +145,7 @@ export function DepositCard() {
         {/* Info Box */}
         <div className="mb-6 p-4 rounded-xl bg-arcane-purple/5 border border-arcane-purple/20">
           <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-arcane-purple flex-shrink-0 mt-0.5" />
+            <Shield className="w-5 h-5 text-ethereal-cyan flex-shrink-0 mt-0.5" />
             <div className="text-sm text-mist-gray">
               <p className="mb-2">
                 Your deposit will be added to the anonymity pool. You'll receive a deposit note
@@ -312,7 +312,7 @@ function ProgressStep({
         className={cn(
           'text-sm transition-colors',
           complete && 'text-spectral-green',
-          active && 'text-arcane-purple',
+          active && 'text-ethereal-cyan',
           !active && !complete && 'text-mist-gray'
         )}
       >

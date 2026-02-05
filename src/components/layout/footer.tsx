@@ -23,16 +23,24 @@ const socials = [
 
 export function Footer() {
   return (
-    <footer className="relative border-t border-arcane-purple/10">
+    <footer
+      className="relative border-t"
+      style={{ borderColor: 'rgba(164, 35, 139, 0.15)' }}
+    >
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-void-black via-obsidian/50 to-transparent pointer-events-none" />
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'linear-gradient(180deg, transparent 0%, rgba(18, 18, 20, 0.8) 100%)',
+        }}
+      />
 
       <div className="relative max-w-6xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
             <Link to="/" className="inline-flex items-center gap-2 mb-4">
-              <span className="font-display text-2xl text-gradient-arcane">GrimSwap</span>
+              <span className="font-display text-2xl text-gradient-cyan">GrimSwap</span>
             </Link>
             <p className="text-mist-gray text-sm leading-relaxed max-w-xs">
               The Dark Arts of DeFi. Privacy-preserving token swaps powered by ZK-SNARK proofs
@@ -40,7 +48,13 @@ export function Footer() {
             </p>
 
             {/* Built on badge */}
-            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-charcoal/50 border border-arcane-purple/10">
+            <div
+              className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
+              style={{
+                background: 'rgba(42, 20, 40, 0.5)',
+                border: '1px solid rgba(164, 35, 139, 0.15)',
+              }}
+            >
               <span className="text-xs text-mist-gray">Built on</span>
               <span className="text-xs font-medium text-ghost-white">Uniswap v4</span>
             </div>
@@ -56,7 +70,7 @@ export function Footer() {
                     to={item.href}
                     className={cn(
                       'text-mist-gray text-sm',
-                      'hover:text-ghost-white',
+                      'hover:text-grim-cyan',
                       'transition-colors duration-200'
                     )}
                   >
@@ -81,11 +95,21 @@ export function Footer() {
                     rel="noopener noreferrer"
                     className={cn(
                       'w-10 h-10 rounded-xl',
-                      'bg-charcoal/50 border border-arcane-purple/10',
                       'flex items-center justify-center',
-                      'hover:border-arcane-purple/30 hover:bg-charcoal/70',
                       'transition-all duration-200'
                     )}
+                    style={{
+                      background: 'rgba(42, 20, 40, 0.5)',
+                      border: '1px solid rgba(164, 35, 139, 0.15)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(0, 237, 218, 0.3)'
+                      e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 237, 218, 0.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(164, 35, 139, 0.15)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                     aria-label={social.name}
                   >
                     <Icon className="w-5 h-5 text-mist-gray" />
@@ -97,20 +121,29 @@ export function Footer() {
             {/* Network badge */}
             <div className="mt-6">
               <div
-                className={cn(
-                  'inline-flex items-center gap-2 px-3 py-1.5 rounded-full',
-                  'bg-spectral-green/10 border border-spectral-green/20'
-                )}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
+                style={{
+                  background: 'rgba(0, 237, 218, 0.1)',
+                  border: '1px solid rgba(0, 237, 218, 0.2)',
+                }}
               >
-                <div className="w-2 h-2 rounded-full bg-spectral-green animate-pulse" />
-                <span className="text-xs text-spectral-green">Unichain Sepolia</span>
+                <div
+                  className="w-2 h-2 rounded-full animate-pulse"
+                  style={{ background: '#00EDDA' }}
+                />
+                <span className="text-xs" style={{ color: '#00EDDA' }}>
+                  Unichain Sepolia
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 pt-6 border-t border-arcane-purple/10">
+        <div
+          className="mt-12 pt-6 border-t"
+          style={{ borderColor: 'rgba(164, 35, 139, 0.15)' }}
+        >
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-xs text-mist-gray/60">
               &copy; {new Date().getFullYear()} GrimSwap. All rights reserved.

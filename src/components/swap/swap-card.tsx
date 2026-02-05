@@ -485,10 +485,10 @@ export function SwapCard() {
               onClick={() => setShowSettings(!showSettings)}
               className={cn(
                 'p-2 rounded-lg transition-all hover:bg-white/5',
-                showSettings && 'bg-arcane-purple/10 text-arcane-purple'
+                showSettings && 'bg-arcane-purple/10 text-ethereal-cyan'
               )}
             >
-              <Settings className={cn('w-5 h-5', showSettings ? 'text-arcane-purple' : 'text-mist-gray')} />
+              <Settings className={cn('w-5 h-5', showSettings ? 'text-ethereal-cyan' : 'text-mist-gray')} />
             </button>
           </div>
 
@@ -515,7 +515,7 @@ export function SwapCard() {
               isPrivacyPool ? "bg-arcane-purple/10 border-arcane-purple/30" : "bg-spectral-green/10 border-spectral-green/30"
             )}>
               <div className="flex items-center justify-between">
-                <div className={cn("flex items-center gap-2 text-sm", isPrivacyPool ? "text-arcane-purple" : "text-spectral-green")}>
+                <div className={cn("flex items-center gap-2 text-sm", isPrivacyPool ? "text-ethereal-cyan" : "text-spectral-green")}>
                   <div className={cn("w-2 h-2 rounded-full animate-pulse", isPrivacyPool ? "bg-arcane-purple" : "bg-spectral-green")} />
                   {isPrivacyPool ? (
                     <span className="flex items-center gap-1.5">
@@ -530,7 +530,7 @@ export function SwapCard() {
                   href={`https://sepolia.uniscan.xyz/address/${DEFAULT_POOL_KEY.hooks}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-mist-gray hover:text-arcane-purple"
+                  className="flex items-center gap-1 text-xs text-mist-gray hover:text-ethereal-cyan"
                 >
                   <ExternalLink className="w-3 h-3" />
                 </a>
@@ -559,7 +559,7 @@ export function SwapCard() {
                 <div>
                   <p className="text-sm text-blood-crimson font-medium">No Deposit Notes</p>
                   <p className="text-xs text-mist-gray mt-1">
-                    Go to <a href="/wallet" className="text-arcane-purple hover:underline">Grimoire</a> to deposit ETH first.
+                    Go to <a href="/wallet" className="text-ethereal-cyan hover:underline">Grimoire</a> to deposit ETH first.
                   </p>
                 </div>
               </div>
@@ -574,7 +574,7 @@ export function SwapCard() {
                   <Wallet className="w-3.5 h-3.5" />
                   Deposit Notes
                 </span>
-                <span className="text-arcane-purple font-mono font-medium">
+                <span className="text-ethereal-cyan font-mono font-medium">
                   {totalNotesBalance.toFixed(4)} ETH
                 </span>
               </div>
@@ -648,7 +648,7 @@ export function SwapCard() {
                 'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
               )}
             >
-              <ArrowDown className="w-5 h-5 text-arcane-purple" />
+              <ArrowDown className="w-5 h-5 text-ethereal-cyan" />
             </button>
           </div>
 

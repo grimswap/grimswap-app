@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { gsap } from 'gsap'
 import { Plus, Minus } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const faqs = [
@@ -28,7 +27,7 @@ const faqs = [
   {
     question: 'How do I get started?',
     answer:
-      'To start using GrimSwap: 1) Connect your wallet (MetaMask, Rainbow, etc.), 2) Ensure you\'re on Unichain Sepolia testnet, 3) Deposit ETH into the Privacy Pool, 4) Generate a proof and execute your private swap. Visit the Swap page to begin!',
+      "To start using GrimSwap: 1) Connect your wallet (MetaMask, Rainbow, etc.), 2) Ensure you're on Unichain Sepolia testnet, 3) Deposit ETH into the Privacy Pool, 4) Generate a proof and execute your private swap. Visit the Swap page to begin!",
   },
 ]
 
@@ -42,34 +41,26 @@ interface FAQItemProps {
 function FAQItem({ question, answer, isOpen, onToggle }: FAQItemProps) {
   return (
     <div
-      className={cn(
-        'faq-item border-b border-arcane-purple/10',
-        'last:border-b-0'
-      )}
+      className="faq-item"
+      style={{ borderBottom: '1px solid rgba(164, 35, 139, 0.15)' }}
     >
       <button
         onClick={onToggle}
-        className={cn(
-          'w-full flex items-center justify-between gap-4 py-5 px-1',
-          'text-left transition-colors duration-200',
-          'hover:text-ghost-white focus-visible:outline-none',
-          isOpen ? 'text-ghost-white' : 'text-mist-gray'
-        )}
+        className="w-full flex items-center justify-between gap-4 py-5 px-1 text-left transition-colors duration-200"
+        style={{ color: isOpen ? '#ffffff' : '#9ca3af' }}
       >
         <span className="font-display text-lg">{question}</span>
         <div
-          className={cn(
-            'flex-shrink-0 w-8 h-8 rounded-full',
-            'bg-arcane-purple/20 border border-arcane-purple/30',
-            'flex items-center justify-center',
-            'transition-all duration-200',
-            isOpen && 'bg-arcane-purple/30 border-arcane-purple/50'
-          )}
+          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
+          style={{
+            background: isOpen ? 'rgba(0, 237, 218, 0.2)' : 'rgba(164, 35, 139, 0.2)',
+            border: `1px solid ${isOpen ? 'rgba(0, 237, 218, 0.4)' : 'rgba(164, 35, 139, 0.3)'}`,
+          }}
         >
           {isOpen ? (
-            <Minus className="w-4 h-4 text-arcane-purple" />
+            <Minus className="w-4 h-4" style={{ color: '#00EDDA' }} />
           ) : (
-            <Plus className="w-4 h-4 text-arcane-purple" />
+            <Plus className="w-4 h-4 text-white" />
           )}
         </div>
       </button>
@@ -83,7 +74,7 @@ function FAQItem({ question, answer, isOpen, onToggle }: FAQItemProps) {
             transition={{ duration: 0.2, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <p className="pb-5 px-1 text-mist-gray leading-relaxed">{answer}</p>
+            <p className="pb-5 px-1 text-gray-400 leading-relaxed">{answer}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -97,17 +88,21 @@ export function FAQSection() {
 
   useEffect(() => {
     const ctx = gsap.context(() => {
-      gsap.from('.faq-item', {
-        y: 20,
-        opacity: 0,
-        duration: 0.4,
-        stagger: 0.08,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 80%',
-        },
-      })
+      gsap.fromTo(
+        '.faq-item',
+        { y: 20, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.4,
+          stagger: 0.08,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top 80%',
+          },
+        }
+      )
     }, sectionRef)
 
     return () => ctx.revert()
@@ -122,21 +117,19 @@ export function FAQSection() {
       <div className="max-w-3xl mx-auto">
         {/* Section header */}
         <div className="text-center mb-12">
-          <h2 className="font-display text-3xl sm:text-4xl text-ghost-white mb-4">
-            Frequently Asked Questions
+          <h2 className="font-display text-3xl sm:text-4xl text-white mb-4">
+            Frequently Asked <span className="text-gradient-cyan">Questions</span>
           </h2>
-          <p className="text-mist-gray">
-            Everything you need to know about GrimSwap
-          </p>
+          <p className="text-gray-400">Everything you need to know about GrimSwap</p>
         </div>
 
         {/* FAQ list */}
         <div
-          className={cn(
-            'rounded-2xl p-6 sm:p-8',
-            'bg-charcoal/30 backdrop-blur-xl',
-            'border border-arcane-purple/10'
-          )}
+          className="rounded-2xl p-6 sm:p-8"
+          style={{
+            background: 'rgba(42, 20, 40, 0.6)',
+            border: '1px solid rgba(164, 35, 139, 0.2)',
+          }}
         >
           {faqs.map((faq, index) => (
             <FAQItem

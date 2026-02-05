@@ -89,7 +89,7 @@ export function PoolStatistics() {
           {/* TVL */}
           <div className="p-3 rounded-xl bg-charcoal/50 border border-arcane-purple/10">
             <div className="flex items-center gap-1.5 mb-1">
-              <Coins className="w-3.5 h-3.5 text-arcane-purple" />
+              <Coins className="w-3.5 h-3.5 text-ethereal-cyan" />
               <span className="text-xs text-mist-gray">TVL</span>
             </div>
             <p className="text-sm font-mono text-ghost-white">
@@ -196,7 +196,7 @@ export function PoolStatistics() {
         <div className="p-3 rounded-xl bg-gradient-to-r from-charcoal/80 to-charcoal/50 border border-arcane-purple/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Droplets className="w-4 h-4 text-arcane-purple" />
+              <Droplets className="w-4 h-4 text-ethereal-cyan" />
               <div>
                 <p className="text-xs text-mist-gray">Total Liquidity</p>
                 <p className="text-sm font-mono text-ghost-white">

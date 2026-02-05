@@ -109,7 +109,7 @@ export function TokenInput({
               onClick={() => handlePercentage(percent)}
               className={cn(
                 'flex-1 px-2 py-1.5 rounded-lg text-xs font-medium',
-                'bg-arcane-purple/10 text-arcane-purple border border-arcane-purple/20',
+                'bg-arcane-purple/10 text-ethereal-cyan border border-arcane-purple/20',
                 'hover:bg-arcane-purple/20 hover:border-arcane-purple/40 transition-colors'
               )}
             >
