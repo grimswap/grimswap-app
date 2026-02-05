@@ -55,16 +55,19 @@ function TokenCard({ token, comingSoon }: TokenCardProps) {
       {/* Token icon */}
       <div className="relative mb-4">
         <div
-          className="w-14 h-14 rounded-full flex items-center justify-center transition-transform duration-300"
+          className="w-14 h-14 rounded-full flex items-center justify-center transition-transform duration-300 overflow-hidden bg-charcoal"
           style={{
-            background: `${tokenColor}22`,
             border: `2px solid ${tokenColor}`,
             transform: isHovered ? 'scale(1.05)' : 'scale(1)',
           }}
         >
-          <span className="font-display text-lg font-bold" style={{ color: tokenColor }}>
-            {token.symbol.charAt(0)}
-          </span>
+          {token.logoURI ? (
+            <img src={token.logoURI} alt={token.symbol} className="w-14 h-14 object-contain" />
+          ) : (
+            <span className="font-display text-lg font-bold" style={{ color: tokenColor }}>
+              {token.symbol.charAt(0)}
+            </span>
+          )}
         </div>
       </div>
 

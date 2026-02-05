@@ -143,17 +143,11 @@ function PoolStatsModal({ isOpen, onClose, pool }: PoolStatsModalProps) {
         {/* Pool Header */}
         <div className="flex items-center gap-3 pb-4 border-b border-arcane-purple/20">
           <div className="flex -space-x-2">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 border-obsidian"
-              style={{ background: `linear-gradient(135deg, ${ETH.color}40, ${ETH.color})` }}
-            >
-              <span className="text-sm font-bold text-ghost-white">Ξ</span>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center z-10 border-2 border-obsidian bg-charcoal overflow-hidden">
+              <img src={ETH.logoURI} alt="ETH" className="w-10 h-10 object-contain" />
             </div>
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-obsidian"
-              style={{ background: `linear-gradient(135deg, ${USDC.color}40, ${USDC.color})` }}
-            >
-              <span className="text-sm font-bold text-ghost-white">$</span>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center border-2 border-obsidian bg-charcoal overflow-hidden">
+              <img src={USDC.logoURI} alt="USDC" className="w-10 h-10 object-contain" />
             </div>
           </div>
           <div>
@@ -252,11 +246,8 @@ function PoolStatsModal({ isOpen, onClose, pool }: PoolStatsModalProps) {
           <div className="p-4 rounded-xl bg-charcoal/50 border border-arcane-purple/10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{ background: `linear-gradient(135deg, ${ETH.color}40, ${ETH.color})` }}
-                >
-                  <span className="text-sm font-bold text-ghost-white">Ξ</span>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-charcoal overflow-hidden">
+                  <img src={ETH.logoURI} alt="ETH" className="w-10 h-10 object-contain" />
                 </div>
                 <div>
                   <p className="font-medium text-ghost-white">Ethereum</p>
@@ -288,11 +279,8 @@ function PoolStatsModal({ isOpen, onClose, pool }: PoolStatsModalProps) {
           <div className="p-4 rounded-xl bg-charcoal/50 border border-arcane-purple/10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
-                  style={{ background: `linear-gradient(135deg, ${USDC.color}40, ${USDC.color})` }}
-                >
-                  <span className="text-sm font-bold text-ghost-white">$</span>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-charcoal overflow-hidden">
+                  <img src={USDC.logoURI} alt="USDC" className="w-10 h-10 object-contain" />
                 </div>
                 <div>
                   <p className="font-medium text-ghost-white">USD Coin</p>
@@ -393,17 +381,11 @@ function PoolRow({ pool, onAddLiquidity, onViewStats }: { pool: PoolInfo; onAddL
           {/* Pool Name */}
           <div className="col-span-2 flex items-center gap-3">
             <div className="flex -space-x-2">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 border-obsidian"
-                style={{ background: `linear-gradient(135deg, ${ETH.color}40, ${ETH.color})` }}
-              >
-                <span className="text-xs font-bold text-ghost-white">Ξ</span>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center z-10 border-2 border-obsidian bg-charcoal overflow-hidden">
+                <img src={ETH.logoURI} alt="ETH" className="w-8 h-8 object-contain" />
               </div>
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-obsidian"
-                style={{ background: `linear-gradient(135deg, ${USDC.color}40, ${USDC.color})` }}
-              >
-                <span className="text-xs font-bold text-ghost-white">$</span>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-obsidian bg-charcoal overflow-hidden">
+                <img src={USDC.logoURI} alt="USDC" className="w-8 h-8 object-contain" />
               </div>
             </div>
             <div>

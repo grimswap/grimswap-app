@@ -18,6 +18,7 @@ export const ETH: Token = {
   decimals: 18,
   isNative: true,
   color: '#627EEA',
+  logoURI: '/assets/img/eth-logo-1.svg',
 }
 
 // USDC on Unichain Sepolia
@@ -27,6 +28,7 @@ export const USDC: Token = {
   name: 'USD Coin',
   decimals: 6,
   color: '#2775CA',
+  logoURI: '/assets/img/USDC-logo.svg',
 }
 
 // Unichain Sepolia Test Tokens (deployed for GrimSwap)

@@ -411,8 +411,8 @@ export function WalletPage() {
           <Card glow="cyan">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-ethereal-cyan/20">
-                  <Coins className="w-5 h-5 text-ethereal-cyan" />
+                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-charcoal overflow-hidden">
+                  <img src={ETH.logoURI} alt="ETH" className="w-10 h-10 object-contain" />
                 </div>
                 <div>
                   <p className="text-xs text-mist-gray mb-0.5">In Privacy Pool</p>
@@ -516,13 +516,19 @@ export function WalletPage() {
                         <div className="flex items-center gap-3">
                           <div
                             className={cn(
-                              'w-10 h-10 rounded-full flex items-center justify-center',
-                              note.spent ? 'bg-mist-gray/20' : 'bg-arcane-purple/20'
+                              'w-10 h-10 rounded-full flex items-center justify-center overflow-hidden',
+                              note.spent ? 'bg-mist-gray/20' : 'bg-charcoal'
                             )}
                           >
-                            <span className="text-sm font-bold">
-                              {note.tokenSymbol?.slice(0, 2) || '??'}
-                            </span>
+                            {note.tokenSymbol === 'ETH' ? (
+                              <img src={ETH.logoURI} alt="ETH" className="w-10 h-10 object-contain" />
+                            ) : note.tokenSymbol === 'USDC' ? (
+                              <img src={USDC.logoURI} alt="USDC" className="w-10 h-10 object-contain" />
+                            ) : (
+                              <span className="text-sm font-bold">
+                                {note.tokenSymbol?.slice(0, 2) || '??'}
+                              </span>
+                            )}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
@@ -771,9 +777,15 @@ export function WalletPage() {
                                 {!stealth.claimed && (
                                   <>
                                     <span className="text-ethereal-cyan/50">•</span>
-                                    <span className="font-mono">{parseFloat(ethBal).toFixed(5)} ETH</span>
+                                    <span className="flex items-center gap-1 font-mono">
+                                      <img src={ETH.logoURI} alt="ETH" className="w-3 h-3" />
+                                      {parseFloat(ethBal).toFixed(5)} ETH
+                                    </span>
                                     <span className="text-ethereal-cyan/50">•</span>
-                                    <span className="font-mono text-spectral-green">{parseFloat(usdcBal).toFixed(2)} USDC</span>
+                                    <span className="flex items-center gap-1 font-mono text-spectral-green">
+                                      <img src={USDC.logoURI} alt="USDC" className="w-3 h-3" />
+                                      {parseFloat(usdcBal).toFixed(2)} USDC
+                                    </span>
                                     {totalUsdValue > 0 && (
                                       <>
                                         <span className="text-ethereal-cyan/50">•</span>
@@ -978,13 +990,8 @@ export function WalletPage() {
         <div className="p-4 space-y-4">
           {/* ETH Only Notice */}
           <div className="flex items-center gap-3 p-3 rounded-xl bg-obsidian border border-arcane-purple/20">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{
-                background: `linear-gradient(135deg, ${ETH.color}40, ${ETH.color})`,
-              }}
-            >
-              <span className="text-sm font-bold text-ghost-white">Ξ</span>
+            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-charcoal overflow-hidden">
+              <img src={ETH.logoURI} alt="ETH" className="w-10 h-10 object-contain" />
             </div>
             <div className="flex-1">
               <p className="text-ghost-white font-medium">ETH</p>
@@ -1176,7 +1183,10 @@ export function WalletPage() {
                 </div>
                 <div className="mt-3 pt-3 border-t border-spectral-green/10 grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-mist-gray mb-1">ETH Balance (for gas)</p>
+                    <p className="text-xs text-mist-gray mb-1 flex items-center gap-1">
+                      <img src={ETH.logoURI} alt="ETH" className="w-3 h-3" />
+                      ETH Balance (for gas)
+                    </p>
                     <p className="font-mono text-ghost-white">
                       {selectedStealth.balances?.eth
                         ? parseFloat(formatUnits(BigInt(selectedStealth.balances.eth), 18)).toFixed(5)
@@ -1190,7 +1200,10 @@ export function WalletPage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs text-mist-gray mb-1">USDC Balance</p>
+                    <p className="text-xs text-mist-gray mb-1 flex items-center gap-1">
+                      <img src={USDC.logoURI} alt="USDC" className="w-3 h-3" />
+                      USDC Balance
+                    </p>
                     <p className="font-mono text-spectral-green">
                       {selectedStealth.balances?.usdc
                         ? parseFloat(formatUnits(BigInt(selectedStealth.balances.usdc), 6)).toFixed(2)

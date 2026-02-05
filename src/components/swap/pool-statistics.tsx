@@ -139,11 +139,8 @@ export function PoolStatistics() {
           <div className="p-3 rounded-xl bg-charcoal/50 border border-arcane-purple/10">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{ background: `linear-gradient(135deg, ${ETH.color}40, ${ETH.color})` }}
-                >
-                  Ξ
+                <div className="w-7 h-7 rounded-full flex items-center justify-center bg-charcoal overflow-hidden">
+                  <img src={ETH.logoURI} alt="ETH" className="w-7 h-7 object-contain" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-ghost-white">ETH</p>
@@ -167,11 +164,8 @@ export function PoolStatistics() {
           <div className="p-3 rounded-xl bg-charcoal/50 border border-arcane-purple/10">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{ background: `linear-gradient(135deg, ${USDC.color}40, ${USDC.color})` }}
-                >
-                  $
+                <div className="w-7 h-7 rounded-full flex items-center justify-center bg-charcoal overflow-hidden">
+                  <img src={USDC.logoURI} alt="USDC" className="w-7 h-7 object-contain" />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-ghost-white">USDC</p>

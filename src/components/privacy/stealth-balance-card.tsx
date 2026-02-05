@@ -3,6 +3,7 @@ import { gsap } from 'gsap'
 import { cn } from '@/lib/utils'
 import { Eye, EyeOff, Scan, RefreshCw } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
+import { ETH, USDC } from '@/lib/tokens'
 
 interface StealthBalance {
   token: string
@@ -185,10 +186,16 @@ export function StealthBalanceCard({
               )}
             >
               {/* Token icon */}
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-arcane-purple to-ethereal-cyan flex items-center justify-center">
-                <span className="text-xs font-bold text-ghost-white">
-                  {balance.symbol.slice(0, 2)}
-                </span>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-charcoal">
+                {balance.symbol === 'ETH' ? (
+                  <img src={ETH.logoURI} alt="ETH" className="w-10 h-10 object-contain" />
+                ) : balance.symbol === 'USDC' ? (
+                  <img src={USDC.logoURI} alt="USDC" className="w-10 h-10 object-contain" />
+                ) : (
+                  <span className="text-xs font-bold text-ghost-white">
+                    {balance.symbol.slice(0, 2)}
+                  </span>
+                )}
               </div>
 
               {/* Token info */}

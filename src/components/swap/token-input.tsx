@@ -85,10 +85,14 @@ export function TokenInput({
         >
           {token ? (
             <>
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-ethereal-cyan to-arcane-purple flex items-center justify-center flex-shrink-0">
-                <span className="text-[8px] font-bold text-ghost-white">
-                  {token.symbol.slice(0, 2)}
-                </span>
+              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden bg-charcoal">
+                {token.logoURI ? (
+                  <img src={token.logoURI} alt={token.symbol} className="w-6 h-6 object-contain" />
+                ) : (
+                  <span className="text-[8px] font-bold text-ghost-white">
+                    {token.symbol.slice(0, 2)}
+                  </span>
+                )}
               </div>
               <span className="font-medium text-ghost-white whitespace-nowrap">{token.symbol}</span>
             </>

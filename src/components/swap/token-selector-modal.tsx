@@ -71,17 +71,18 @@ export function TokenSelectorModal({
               )}
             >
               {/* Token icon */}
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{
-                  background: token.color
-                    ? `linear-gradient(135deg, ${token.color}40, ${token.color})`
-                    : 'linear-gradient(135deg, #8B5CF6, #00D4FF)',
-                }}
-              >
-                <span className="text-sm font-bold text-white">
-                  {token.symbol === 'ETH' ? 'Ξ' : '$'}
-                </span>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-charcoal">
+                {token.logoURI ? (
+                  <img
+                    src={token.logoURI}
+                    alt={token.symbol}
+                    className="w-10 h-10 object-contain"
+                  />
+                ) : (
+                  <span className="text-sm font-bold text-white">
+                    {token.symbol.charAt(0)}
+                  </span>
+                )}
               </div>
 
               {/* Token info */}
