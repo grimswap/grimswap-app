@@ -1,11 +1,14 @@
 /**
- * Merkle tree utilities for GrimSwap ZK proofs
+ * Sparse Merkle tree utilities for GrimSwap ZK proofs
+ * Optimized to only compute necessary hashes, not the full 2^20 tree
  */
 
 import { poseidonHash } from './commitment'
 
 export const MERKLE_TREE_HEIGHT = 20 // 2^20 = 1,048,576 leaves
-export const ZERO_VALUE = BigInt(0)
+// This is Poseidon(0), the standard zero value used in ZK circuits
+// MUST match the circuit's zero value exactly
+export const ZERO_VALUE = BigInt('21663839004416932945382355908790599225266501822907911457504978515578255421292')
 
 /**
  * Merkle proof for a leaf
@@ -19,100 +22,130 @@ export interface MerkleProof {
 }
 
 /**
- * Simplified Merkle tree implementation
+ * Pre-computed zero hashes for each level (computed once)
+ */
+let cachedZeros: bigint[] | null = null
+
+async function getZeros(height: number): Promise<bigint[]> {
+  if (cachedZeros && cachedZeros.length > height) {
+    return cachedZeros
+  }
+
+  const zeros: bigint[] = [ZERO_VALUE]
+  for (let i = 1; i <= height; i++) {
+    zeros[i] = await poseidonHash([zeros[i - 1], zeros[i - 1]])
+  }
+
+  cachedZeros = zeros
+  return zeros
+}
+
+/**
+ * Sparse Merkle tree implementation
+ * Only stores actual leaves and computes hashes on-demand
  */
 export class MerkleTree {
   private height: number
-  private leaves: bigint[]
-  private zeros: bigint[] // Zero values for each level
-  private layers: bigint[][] // Cache of tree layers
+  private leaves: Map<number, bigint> // Sparse storage: index -> leaf value
+  private leafCount: number
+  private zeros: bigint[]
+  private nodeCache: Map<string, bigint> // Cache computed nodes
 
   constructor(height: number = MERKLE_TREE_HEIGHT) {
     this.height = height
-    this.leaves = []
+    this.leaves = new Map()
+    this.leafCount = 0
     this.zeros = []
-    this.layers = []
+    this.nodeCache = new Map()
   }
 
   /**
    * Initialize the tree with zero values
    */
   async initialize(): Promise<void> {
-    // Compute zero values for each level
-    this.zeros = [ZERO_VALUE]
-    for (let i = 1; i <= this.height; i++) {
-      this.zeros[i] = await poseidonHash([this.zeros[i - 1], this.zeros[i - 1]])
-    }
-
-    // Initialize layers
-    this.layers = Array.from({ length: this.height + 1 }, () => [])
-    this.layers[0] = []
+    this.zeros = await getZeros(this.height)
   }
 
   /**
    * Insert a new leaf (commitment)
    */
   async insert(leaf: bigint): Promise<number> {
-    const index = this.leaves.length
-    this.leaves.push(leaf)
-
-    // Clear cached layers (will be rebuilt on next root calculation)
-    this.layers = Array.from({ length: this.height + 1 }, () => [])
-
+    const index = this.leafCount
+    this.leaves.set(index, leaf)
+    this.leafCount++
+    this.nodeCache.clear() // Invalidate cache
     return index
   }
 
   /**
-   * Get current root
+   * Get node at specific position, using zeros for empty positions
    */
-  async getRoot(): Promise<bigint> {
-    if (this.leaves.length === 0) {
-      return this.zeros[this.height]
-    }
-
-    // Build tree from leaves
-    let currentLevel = [...this.leaves]
-
-    // Pad with zeros to next power of 2
-    const capacity = 2 ** this.height
-    while (currentLevel.length < capacity) {
-      currentLevel.push(this.zeros[0])
-    }
-
-    this.layers[0] = currentLevel
-
-    // Build tree level by level
-    for (let level = 1; level <= this.height; level++) {
-      const prevLevel = this.layers[level - 1]
-      const currentLevelNodes: bigint[] = []
-
-      for (let i = 0; i < prevLevel.length; i += 2) {
-        const left = prevLevel[i]
-        const right = prevLevel[i + 1] !== undefined ? prevLevel[i + 1] : this.zeros[level - 1]
-        const parent = await poseidonHash([left, right])
-        currentLevelNodes.push(parent)
-      }
-
-      this.layers[level] = currentLevelNodes
-
-      if (currentLevelNodes.length === 1) {
-        return currentLevelNodes[0]
-      }
-    }
-
-    return this.layers[this.height][0]
+  private getLeaf(index: number): bigint {
+    return this.leaves.get(index) ?? this.zeros[0]
   }
 
   /**
-   * Get Merkle proof for a leaf
+   * Compute hash for a node, with caching
    */
-  async getProof(leafIndex: number): Promise<MerkleProof> {
-    if (leafIndex >= this.leaves.length) {
-      throw new Error(`Leaf index ${leafIndex} out of bounds (${this.leaves.length} leaves)`)
+  private async computeNode(level: number, index: number): Promise<bigint> {
+    const cacheKey = `${level}-${index}`
+
+    if (this.nodeCache.has(cacheKey)) {
+      return this.nodeCache.get(cacheKey)!
     }
 
-    // Ensure tree is built
-    await this.getRoot()
+    let result: bigint
+
+    if (level === 0) {
+      // Leaf level
+      result = this.getLeaf(index)
+    } else {
+      // Check if entire subtree is empty (all zeros)
+      const subtreeSize = Math.pow(2, level)
+      const startLeaf = index * subtreeSize
+      const endLeaf = startLeaf + subtreeSize
+
+      // If no leaves in this subtree, use pre-computed zero
+      let hasLeaves = false
+      for (let i = startLeaf; i < endLeaf && i < this.leafCount; i++) {
+        if (this.leaves.has(i)) {
+          hasLeaves = true
+          break
+        }
+      }
+
+      if (!hasLeaves && startLeaf >= this.leafCount) {
+        // Entire subtree is zeros
+        result = this.zeros[level]
+      } else {
+        // Compute from children
+        const leftChild = await this.computeNode(level - 1, index * 2)
+        const rightChild = await this.computeNode(level - 1, index * 2 + 1)
+        result = await poseidonHash([leftChild, rightChild])
+      }
+    }
+
+    this.nodeCache.set(cacheKey, result)
+    return result
+  }
+
+  /**
+   * Get current root - only computes necessary hashes
+   */
+  async getRoot(): Promise<bigint> {
+    if (this.leafCount === 0) {
+      return this.zeros[this.height]
+    }
+    return this.computeNode(this.height, 0)
+  }
+
+  /**
+   * Get Merkle proof for a leaf - only computes necessary path
+   */
+  async getProof(leafIndex: number): Promise<MerkleProof> {
+    if (leafIndex >= this.leafCount) {
+      throw new Error(`Leaf index ${leafIndex} out of bounds (${this.leafCount} leaves)`)
+    }
 
     const pathElements: bigint[] = []
     const pathIndices: number[] = []
@@ -123,12 +156,8 @@ export class MerkleTree {
       const isLeft = currentIndex % 2 === 0
       const siblingIndex = isLeft ? currentIndex + 1 : currentIndex - 1
 
-      let sibling: bigint
-      if (siblingIndex < this.layers[level].length) {
-        sibling = this.layers[level][siblingIndex]
-      } else {
-        sibling = this.zeros[level]
-      }
+      // Get sibling hash
+      const sibling = await this.computeNode(level, siblingIndex)
 
       pathElements.push(sibling)
       pathIndices.push(isLeft ? 0 : 1)
@@ -137,7 +166,7 @@ export class MerkleTree {
     }
 
     const root = await this.getRoot()
-    const leaf = this.leaves[leafIndex]
+    const leaf = this.getLeaf(leafIndex)
 
     return {
       pathElements,
@@ -172,14 +201,18 @@ export class MerkleTree {
    * Get number of leaves
    */
   getLeafCount(): number {
-    return this.leaves.length
+    return this.leafCount
   }
 
   /**
-   * Get all leaves
+   * Get all leaves as array
    */
   getLeaves(): bigint[] {
-    return [...this.leaves]
+    const result: bigint[] = []
+    for (let i = 0; i < this.leafCount; i++) {
+      result.push(this.getLeaf(i))
+    }
+    return result
   }
 
   /**
@@ -188,7 +221,7 @@ export class MerkleTree {
   exportState(): { height: number; leaves: string[] } {
     return {
       height: this.height,
-      leaves: this.leaves.map(l => l.toString()),
+      leaves: this.getLeaves().map(l => l.toString()),
     }
   }
 
@@ -197,9 +230,15 @@ export class MerkleTree {
    */
   async importState(state: { height: number; leaves: string[] }): Promise<void> {
     this.height = state.height
-    this.leaves = state.leaves.map(l => BigInt(l))
+    this.leaves = new Map()
+    this.leafCount = 0
+    this.nodeCache = new Map()
+
     await this.initialize()
-    await this.getRoot() // Build tree
+
+    for (const leafStr of state.leaves) {
+      await this.insert(BigInt(leafStr))
+    }
   }
 }
 

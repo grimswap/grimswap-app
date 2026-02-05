@@ -21,7 +21,7 @@ export const UNICHAIN_SEPOLIA = {
 } as const
 
 // Relayer API URL
-export const RELAYER_URL = 'https://grimswap-relayer-production.up.railway.app'
+export const RELAYER_URL = 'https://services.grimswap.com'
 
 // Deployed Contract Addresses V2 (Unichain Sepolia)
 export const CONTRACTS = {
@@ -63,6 +63,10 @@ export const CONTRACTS = {
 // Merkle tree configuration
 export const MERKLE_TREE_HEIGHT = 20 // 2^20 = ~1M deposits
 export const MAX_DEPOSIT_AMOUNT = BigInt('100000000000000000000') // 100 tokens
+
+// GrimPool deployment block on Unichain Sepolia
+// Used as starting point for event queries to avoid querying from block 0
+export const GRIMPOOL_DEPLOYMENT_BLOCK = 43_000_000n // Approximate deployment block
 
 // Default slippage tolerance (0.5%)
 export const DEFAULT_SLIPPAGE = 0.5

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { usePublicClient, useChainId } from 'wagmi'
 import { MerkleTree, type MerkleProof } from '@/lib/zk'
 import { grimPoolConfig } from '@/lib/contracts'
+import { GRIMPOOL_DEPLOYMENT_BLOCK } from '@/lib/constants'
 import {
   saveMerkleTreeState,
   loadMerkleTreeState,
@@ -146,8 +147,10 @@ export function useMerkleTree() {
       // Get current block number
       const currentBlock = await publicClient.getBlockNumber()
 
-      // Determine from block
-      const fromBlock = lastSyncedBlock > 0 ? BigInt(lastSyncedBlock + 1) : BigInt(0)
+      // Determine from block (use deployment block if first sync)
+      const fromBlock = lastSyncedBlock > 0
+        ? BigInt(lastSyncedBlock + 1)
+        : GRIMPOOL_DEPLOYMENT_BLOCK
 
       // Fetch new deposits
       const newCommitments = await fetchDeposits(fromBlock, currentBlock)

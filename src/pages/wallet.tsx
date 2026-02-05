@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { gsap } from 'gsap'
-import { useAccount } from 'wagmi'
-import { parseUnits, formatUnits } from 'viem'
-import { useDepositNotes, useGrimPool } from '@/hooks'
+import { useAccount, usePublicClient } from 'wagmi'
+import { parseUnits, formatUnits, createWalletClient, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { useDepositNotes, useGrimPool, useStealthAddresses, useStateView, type StealthAddress } from '@/hooks'
+import { DEFAULT_POOL_KEY } from '@/lib/contracts'
 import { useNativeBalance } from '@/hooks/use-token-balance'
+import { unichainSepolia } from '@/lib/wagmi'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -32,7 +35,12 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
+  Send,
+  Ghost,
+  Key,
+  Loader2,
 } from 'lucide-react'
+import { USDC } from '@/lib/tokens'
 import type { StoredDepositNote } from '@/lib/storage/deposit-notes'
 
 export function WalletPage() {
@@ -59,11 +67,26 @@ export function WalletPage() {
     error: depositError,
     isLoading: isDepositing,
     reset: resetDeposit,
-    getDepositCount,
   } = useGrimPool()
 
   // Balances
   const { formatted: ethBalance } = useNativeBalance()
+
+  // Public client for balance checking
+  const publicClient = usePublicClient()
+
+  // Stealth addresses
+  const {
+    stealthAddresses,
+    unclaimedAddresses,
+    isLoading: stealthLoading,
+    updateBalances,
+    markAsClaimed,
+    deleteStealthAddress,
+  } = useStealthAddresses()
+
+  // Get current ETH price for USD valuations
+  const { currentPrice: ethPrice } = useStateView(DEFAULT_POOL_KEY)
 
   // UI State
   const [isDepositModalOpen, setIsDepositModalOpen] = useState(false)
@@ -71,20 +94,28 @@ export function WalletPage() {
   const [isClearModalOpen, setIsClearModalOpen] = useState(false)
   const [showSecrets, setShowSecrets] = useState(false)
   const [importJson, setImportJson] = useState('')
-  const [poolDepositCount, setPoolDepositCount] = useState(0)
 
   // Deposit modal state
   const [depositAmount, setDepositAmount] = useState('')
 
   // Copy state
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [copiedStealthId, setCopiedStealthId] = useState<string | null>(null)
 
-  // Fetch pool stats
+  // Stealth claim modal state
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState(false)
+  const [selectedStealth, setSelectedStealth] = useState<StealthAddress | null>(null)
+  const [claimDestination, setClaimDestination] = useState('')
+  const [isClaiming, setIsClaiming] = useState(false)
+  const [claimError, setClaimError] = useState<string | null>(null)
+  const [isRefreshingBalances, setIsRefreshingBalances] = useState(false)
+
+  // Refresh stealth balances on mount and when addresses change
   useEffect(() => {
-    if (isConnected) {
-      getDepositCount().then(setPoolDepositCount)
+    if (isConnected && unclaimedAddresses.length > 0) {
+      refreshStealthBalances()
     }
-  }, [isConnected, getDepositCount])
+  }, [isConnected, unclaimedAddresses.length])
 
   // Animation on mount
   useEffect(() => {
@@ -184,6 +215,126 @@ export function WalletPage() {
     })
   }
 
+  // Refresh stealth address balances
+  const refreshStealthBalances = useCallback(async () => {
+    if (!publicClient || unclaimedAddresses.length === 0) return
+
+    setIsRefreshingBalances(true)
+    try {
+      for (const stealth of unclaimedAddresses) {
+        // Get ETH balance
+        const ethBal = await publicClient.getBalance({ address: stealth.address })
+
+        // Get USDC balance
+        const usdcBal = await publicClient.readContract({
+          address: USDC.address,
+          abi: [
+            {
+              type: 'function',
+              name: 'balanceOf',
+              inputs: [{ name: 'account', type: 'address' }],
+              outputs: [{ name: '', type: 'uint256' }],
+              stateMutability: 'view',
+            },
+          ],
+          functionName: 'balanceOf',
+          args: [stealth.address],
+        }) as bigint
+
+        await updateBalances(stealth.address, {
+          eth: ethBal.toString(),
+          usdc: usdcBal.toString(),
+        })
+      }
+    } catch (error) {
+      console.error('Failed to refresh balances:', error)
+    } finally {
+      setIsRefreshingBalances(false)
+    }
+  }, [publicClient, unclaimedAddresses, updateBalances])
+
+  // Claim from stealth address (send USDC to destination)
+  const handleClaim = useCallback(async () => {
+    if (!selectedStealth || !claimDestination || !publicClient) return
+
+    setIsClaiming(true)
+    setClaimError(null)
+
+    try {
+      // Create wallet client from stealth private key
+      const stealthAccount = privateKeyToAccount(selectedStealth.privateKey)
+      const stealthWallet = createWalletClient({
+        account: stealthAccount,
+        chain: unichainSepolia,
+        transport: http(),
+      })
+
+      // Get USDC balance
+      const usdcBalance = await publicClient.readContract({
+        address: USDC.address,
+        abi: [
+          {
+            type: 'function',
+            name: 'balanceOf',
+            inputs: [{ name: 'account', type: 'address' }],
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'view',
+          },
+        ],
+        functionName: 'balanceOf',
+        args: [selectedStealth.address],
+      }) as bigint
+
+      if (usdcBalance === 0n) {
+        throw new Error('No USDC balance to claim')
+      }
+
+      // Transfer USDC to destination
+      const txHash = await stealthWallet.writeContract({
+        address: USDC.address,
+        abi: [
+          {
+            type: 'function',
+            name: 'transfer',
+            inputs: [
+              { name: 'to', type: 'address' },
+              { name: 'amount', type: 'uint256' },
+            ],
+            outputs: [{ name: '', type: 'bool' }],
+            stateMutability: 'nonpayable',
+          },
+        ],
+        functionName: 'transfer',
+        args: [claimDestination as `0x${string}`, usdcBalance],
+      })
+
+      // Wait for confirmation
+      await publicClient.waitForTransactionReceipt({ hash: txHash })
+
+      // Mark as claimed
+      await markAsClaimed(selectedStealth.address, txHash, claimDestination as `0x${string}`)
+
+      // Close modal
+      setIsClaimModalOpen(false)
+      setSelectedStealth(null)
+      setClaimDestination('')
+
+    } catch (error) {
+      console.error('Claim failed:', error)
+      setClaimError(error instanceof Error ? error.message : 'Failed to claim')
+    } finally {
+      setIsClaiming(false)
+    }
+  }, [selectedStealth, claimDestination, publicClient, markAsClaimed])
+
+  // Open claim modal
+  const openClaimModal = (stealth: StealthAddress) => {
+    setSelectedStealth(stealth)
+    setClaimDestination(address || '')
+    setClaimError(null)
+    setIsClaimModalOpen(true)
+  }
+
   if (!isConnected) {
     return (
       <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center px-4">
@@ -266,24 +417,24 @@ export function WalletPage() {
                 <div>
                   <p className="text-xs text-mist-gray mb-0.5">In Privacy Pool</p>
                   <p className="text-xl font-mono text-ghost-white">
-                    {totalNoteValue.toFixed(2)}
+                    {totalNoteValue < 0.01 ? totalNoteValue.toFixed(4) : totalNoteValue.toFixed(4)} ETH
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Pool Stats */}
+          {/* Stealth Addresses */}
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-mist-gray/20">
-                  <Shield className="w-5 h-5 text-mist-gray" />
+                <div className="p-2.5 rounded-xl bg-spectral-green/20">
+                  <Ghost className="w-5 h-5 text-spectral-green" />
                 </div>
                 <div>
-                  <p className="text-xs text-mist-gray mb-0.5">Pool Deposits</p>
+                  <p className="text-xs text-mist-gray mb-0.5">Stealth Addresses</p>
                   <p className="text-xl font-mono text-ghost-white">
-                    {poolDepositCount}
+                    {unclaimedAddresses.length}
                   </p>
                 </div>
               </div>
@@ -490,6 +641,225 @@ export function WalletPage() {
                     <Trash2 className="w-4 h-4 mr-2" />
                     Clear All
                   </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Stealth Addresses Section */}
+        <div className="wallet-element">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ghost className="w-5 h-5 text-spectral-green" />
+                <h2 className="font-display text-lg text-ghost-white">
+                  Stealth Addresses
+                </h2>
+                <span className="text-xs text-mist-gray bg-charcoal px-2 py-0.5 rounded-full">
+                  {unclaimedAddresses.length} unclaimed
+                </span>
+              </div>
+              <button
+                onClick={refreshStealthBalances}
+                disabled={isRefreshingBalances}
+                className={cn(
+                  'p-2 rounded-lg transition-colors',
+                  'hover:bg-white/5 text-mist-gray hover:text-ghost-white',
+                  isRefreshingBalances && 'animate-spin'
+                )}
+                title="Refresh balances"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </CardHeader>
+            <CardContent>
+              {stealthLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-2 border-spectral-green border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : stealthAddresses.length === 0 ? (
+                <div className="text-center py-12">
+                  <Ghost className="w-12 h-12 text-mist-gray/30 mx-auto mb-3" />
+                  <p className="text-mist-gray mb-2">No stealth addresses yet</p>
+                  <p className="text-xs text-mist-gray/70">
+                    Stealth addresses are created when you perform private swaps
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stealthAddresses.map((stealth) => {
+                    const ethBal = stealth.balances?.eth
+                      ? formatUnits(BigInt(stealth.balances.eth), 18)
+                      : '0'
+                    const usdcBal = stealth.balances?.usdc
+                      ? formatUnits(BigInt(stealth.balances.usdc), 6)
+                      : '0'
+                    const hasBalance = parseFloat(usdcBal) > 0
+                    // Calculate USD equivalent values
+                    const ethUsdValue = ethPrice ? parseFloat(ethBal) * ethPrice : 0
+                    const totalUsdValue = ethUsdValue + parseFloat(usdcBal)
+
+                    return (
+                      <div
+                        key={stealth.id}
+                        className={cn(
+                          'p-4 rounded-xl border transition-all',
+                          stealth.claimed
+                            ? 'bg-charcoal/30 border-mist-gray/10 opacity-60'
+                            : hasBalance
+                            ? 'bg-spectral-green/5 border-spectral-green/30 hover:border-spectral-green/50'
+                            : 'bg-charcoal/50 border-arcane-purple/20 hover:border-arcane-purple/40'
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          {/* Left: Address Info */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div
+                              className={cn(
+                                'w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0',
+                                stealth.claimed
+                                  ? 'bg-mist-gray/20'
+                                  : hasBalance
+                                  ? 'bg-spectral-green/20'
+                                  : 'bg-arcane-purple/20'
+                              )}
+                            >
+                              {stealth.claimed ? (
+                                <CheckCircle className="w-5 h-5 text-mist-gray" />
+                              ) : (
+                                <Ghost className="w-5 h-5 text-spectral-green" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={async () => {
+                                    await navigator.clipboard.writeText(stealth.address)
+                                    setCopiedStealthId(stealth.id)
+                                    setTimeout(() => setCopiedStealthId(null), 2000)
+                                  }}
+                                  className="font-mono text-sm text-ghost-white truncate hover:text-arcane-purple transition-colors flex items-center gap-1"
+                                  title={`Click to copy: ${stealth.address}`}
+                                >
+                                  {stealth.address.slice(0, 8)}...{stealth.address.slice(-6)}
+                                  {copiedStealthId === stealth.id ? (
+                                    <Check className="w-3 h-3 text-spectral-green" />
+                                  ) : (
+                                    <Copy className="w-3 h-3 text-mist-gray" />
+                                  )}
+                                </button>
+                                {stealth.claimed ? (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-mist-gray/20 text-mist-gray flex-shrink-0">
+                                    Claimed
+                                  </span>
+                                ) : hasBalance ? (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-spectral-green/20 text-spectral-green flex-shrink-0">
+                                    Ready to Claim
+                                  </span>
+                                ) : (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-ethereal-cyan/20 text-ethereal-cyan flex-shrink-0">
+                                    Pending
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-mist-gray">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {formatDate(stealth.createdAt)}
+                                </span>
+                                {!stealth.claimed && (
+                                  <>
+                                    <span className="text-arcane-purple/50">•</span>
+                                    <span className="font-mono">{parseFloat(ethBal).toFixed(5)} ETH</span>
+                                    <span className="text-arcane-purple/50">•</span>
+                                    <span className="font-mono text-spectral-green">{parseFloat(usdcBal).toFixed(2)} USDC</span>
+                                    {totalUsdValue > 0 && (
+                                      <>
+                                        <span className="text-arcane-purple/50">•</span>
+                                        <span className="font-mono text-ethereal-cyan">≈ ${totalUsdValue.toFixed(2)}</span>
+                                      </>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right: Actions */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {!stealth.claimed && hasBalance && (
+                              <Button
+                                size="sm"
+                                onClick={() => openClaimModal(stealth)}
+                                className="bg-spectral-green hover:bg-spectral-green/80"
+                              >
+                                <Send className="w-3 h-3 mr-1" />
+                                Claim
+                              </Button>
+                            )}
+                            {stealth.swapTxHash && (
+                              <a
+                                href={`https://sepolia.uniscan.xyz/tx/${stealth.swapTxHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 rounded-lg hover:bg-white/5 text-mist-gray hover:text-ghost-white transition-colors"
+                                title="View swap transaction"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            )}
+                            {stealth.claimed && (
+                              <button
+                                onClick={() => deleteStealthAddress(stealth.id)}
+                                className="p-2 rounded-lg hover:bg-blood-crimson/10 text-mist-gray hover:text-blood-crimson transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Claimed destination */}
+                        {stealth.claimed && stealth.claimDestination && (
+                          <div className="mt-3 pt-3 border-t border-mist-gray/10">
+                            <div className="flex items-center gap-2 text-xs text-mist-gray">
+                              <Send className="w-3 h-3" />
+                              <span>Claimed to:</span>
+                              <span className="font-mono text-ghost-white">
+                                {stealth.claimDestination.slice(0, 10)}...{stealth.claimDestination.slice(-8)}
+                              </span>
+                              {stealth.claimTxHash && (
+                                <a
+                                  href={`https://sepolia.uniscan.xyz/tx/${stealth.claimTxHash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-arcane-purple hover:underline flex items-center gap-1"
+                                >
+                                  View
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Info about stealth addresses */}
+              {stealthAddresses.length > 0 && (
+                <div className="mt-4 p-3 rounded-xl bg-spectral-green/5 border border-spectral-green/20">
+                  <div className="flex items-start gap-2">
+                    <Key className="w-4 h-4 text-spectral-green flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-mist-gray">
+                      Stealth addresses hold tokens from private swaps. The private keys are stored
+                      securely in your browser. Claim sends tokens to your chosen destination.
+                    </p>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -775,6 +1145,122 @@ export function WalletPage() {
               Clear All
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Claim Modal */}
+      <Modal
+        isOpen={isClaimModalOpen}
+        onClose={() => {
+          setIsClaimModalOpen(false)
+          setSelectedStealth(null)
+          setClaimError(null)
+        }}
+        title="Claim from Stealth Address"
+      >
+        <div className="p-4 space-y-4">
+          {selectedStealth && (
+            <>
+              {/* Stealth Address Info */}
+              <div className="p-3 rounded-xl bg-obsidian border border-spectral-green/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-spectral-green/20 flex items-center justify-center">
+                    <Ghost className="w-5 h-5 text-spectral-green" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-mist-gray mb-1">From Stealth Address</p>
+                    <p className="font-mono text-sm text-ghost-white truncate">
+                      {selectedStealth.address}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 pt-3 border-t border-spectral-green/10 grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-mist-gray mb-1">ETH Balance (for gas)</p>
+                    <p className="font-mono text-ghost-white">
+                      {selectedStealth.balances?.eth
+                        ? parseFloat(formatUnits(BigInt(selectedStealth.balances.eth), 18)).toFixed(5)
+                        : '0'}{' '}
+                      ETH
+                    </p>
+                    {ethPrice && selectedStealth.balances?.eth && (
+                      <p className="text-xs text-mist-gray mt-0.5">
+                        ≈ ${(parseFloat(formatUnits(BigInt(selectedStealth.balances.eth), 18)) * ethPrice).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs text-mist-gray mb-1">USDC Balance</p>
+                    <p className="font-mono text-spectral-green">
+                      {selectedStealth.balances?.usdc
+                        ? parseFloat(formatUnits(BigInt(selectedStealth.balances.usdc), 6)).toFixed(2)
+                        : '0'}{' '}
+                      USDC
+                    </p>
+                    <p className="text-xs text-mist-gray mt-0.5">
+                      ≈ ${selectedStealth.balances?.usdc
+                        ? parseFloat(formatUnits(BigInt(selectedStealth.balances.usdc), 6)).toFixed(2)
+                        : '0'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Destination Address */}
+              <div>
+                <label className="block text-sm text-mist-gray mb-2">Send USDC To</label>
+                <Input
+                  type="text"
+                  placeholder="0x..."
+                  value={claimDestination}
+                  onChange={(e) => setClaimDestination(e.target.value)}
+                />
+                <p className="text-xs text-mist-gray mt-1">
+                  Enter the address where you want to receive your USDC
+                </p>
+              </div>
+
+              {/* Privacy Note */}
+              <div className="p-3 rounded-xl bg-arcane-purple/10 border border-arcane-purple/20">
+                <div className="flex items-start gap-2">
+                  <Shield className="w-4 h-4 text-arcane-purple flex-shrink-0 mt-0.5" />
+                  <div className="text-xs text-mist-gray">
+                    <p className="text-arcane-purple font-medium mb-1">Privacy Note</p>
+                    <p>
+                      This transaction will transfer USDC from the stealth address to your destination.
+                      The stealth address has been funded with ETH for gas by the relayer.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Error */}
+              {claimError && (
+                <div className="p-3 rounded-xl bg-blood-crimson/10 border border-blood-crimson/30">
+                  <p className="text-sm text-blood-crimson">{claimError}</p>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <Button
+                onClick={handleClaim}
+                disabled={!claimDestination || isClaiming}
+                className="w-full bg-spectral-green hover:bg-spectral-green/80"
+              >
+                {isClaiming ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Claiming...
+                  </div>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Claim USDC
+                  </>
+                )}
+              </Button>
+            </>
+          )}
         </div>
       </Modal>
     </div>

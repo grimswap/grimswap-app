@@ -5,10 +5,9 @@
  */
 
 import { type DepositNote } from '@/lib/zk'
+import { openDB, STORES } from './db'
 
-const DB_NAME = 'grimswap-db'
-const DB_VERSION = 1
-const STORE_NAME = 'deposit-notes'
+const STORE_NAME = STORES.DEPOSIT_NOTES
 
 /**
  * Stored deposit note with metadata
@@ -20,37 +19,6 @@ export interface StoredDepositNote extends DepositNote {
   spent: boolean
   tokenAddress: string
   tokenSymbol: string
-}
-
-/**
- * Initialize IndexedDB
- */
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve(request.result)
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result
-
-      // Create deposit notes store
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, {
-          keyPath: 'id',
-          autoIncrement: true,
-        })
-
-        // Indexes for querying
-        store.createIndex('commitment', 'commitment', { unique: true })
-        store.createIndex('nullifierHash', 'nullifierHash', { unique: true })
-        store.createIndex('spent', 'spent', { unique: false })
-        store.createIndex('tokenAddress', 'tokenAddress', { unique: false })
-        store.createIndex('createdAt', 'createdAt', { unique: false })
-      }
-    }
-  })
 }
 
 /**
@@ -78,8 +46,6 @@ export async function saveDepositNote(
 
     request.onsuccess = () => resolve(request.result as number)
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -96,8 +62,6 @@ export async function getAllDepositNotes(): Promise<StoredDepositNote[]> {
 
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -117,8 +81,6 @@ export async function getUnspentNotes(): Promise<StoredDepositNote[]> {
       resolve(allNotes.filter(note => !note.spent))
     }
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -139,8 +101,6 @@ export async function getNoteByCommitment(commitment: bigint): Promise<StoredDep
       resolve(found || null)
     }
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -163,8 +123,6 @@ export async function getNoteByNullifierHash(
       resolve(found || null)
     }
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -195,7 +153,6 @@ export async function markNoteAsSpent(id: number): Promise<void> {
     }
 
     getRequest.onerror = () => reject(getRequest.error)
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -212,8 +169,6 @@ export async function deleteDepositNote(id: number): Promise<void> {
 
     request.onsuccess = () => resolve()
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -287,8 +242,6 @@ export async function clearAllNotes(): Promise<void> {
 
     request.onsuccess = () => resolve()
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 

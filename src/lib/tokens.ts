@@ -54,7 +54,7 @@ export const TOKENS: Token[] = [
   TOKEN_B,
 ]
 
-// Default tokens for swap (ETH -> USDC - real Uniswap pool)
+// Default tokens for swap (ETH -> USDC)
 export const DEFAULT_FROM_TOKEN = ETH
 export const DEFAULT_TO_TOKEN = USDC
 

@@ -2,9 +2,9 @@
  * IndexedDB storage for Merkle tree state
  */
 
-const DB_NAME = 'grimswap-db'
-const DB_VERSION = 1
-const STORE_NAME = 'merkle-trees'
+import { openDB, STORES } from './db'
+
+const STORE_NAME = STORES.MERKLE_TREES
 
 export interface StoredMerkleTree {
   id: string // Chain ID + Pool address
@@ -13,27 +13,6 @@ export interface StoredMerkleTree {
   lastSyncedBlock: number
   lastUpdated: number
   root: string
-}
-
-/**
- * Initialize IndexedDB
- */
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
-
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve(request.result)
-
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result
-
-      // Create merkle trees store if it doesn't exist
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' })
-      }
-    }
-  })
 }
 
 /**
@@ -49,8 +28,6 @@ export async function saveMerkleTreeState(state: StoredMerkleTree): Promise<void
 
     request.onsuccess = () => resolve()
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -67,8 +44,6 @@ export async function loadMerkleTreeState(id: string): Promise<StoredMerkleTree 
 
     request.onsuccess = () => resolve(request.result || null)
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -85,8 +60,6 @@ export async function deleteMerkleTreeState(id: string): Promise<void> {
 
     request.onsuccess = () => resolve()
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }
 
@@ -103,7 +76,5 @@ export async function clearAllMerkleTrees(): Promise<void> {
 
     request.onsuccess = () => resolve()
     request.onerror = () => reject(request.error)
-
-    transaction.oncomplete = () => db.close()
   })
 }

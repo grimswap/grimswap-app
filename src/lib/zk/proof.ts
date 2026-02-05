@@ -119,6 +119,20 @@ export interface SwapParams {
 }
 
 /**
+ * Yield to the event loop to allow UI updates
+ */
+function yieldToUI(): Promise<void> {
+  return new Promise(resolve => {
+    // Use requestAnimationFrame for smoother UI updates
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => setTimeout(resolve, 0))
+    } else {
+      setTimeout(resolve, 0)
+    }
+  })
+}
+
+/**
  * Generate proof using Web Worker (non-blocking)
  */
 async function generateProofInWorker(
@@ -128,15 +142,30 @@ async function generateProofInWorker(
   const worker = getProofWorker()
 
   if (!worker) {
-    // Fallback to main thread
-    onProgress?.('Generating proof (main thread)', 0.3)
-    const { proof, publicSignals } = await groth16.fullProve(
-      circuitInputs,
-      WASM_PATH,
-      ZKEY_PATH
-    )
-    onProgress?.('Proof generated', 1.0)
-    return { proof, publicSignals }
+    // Fallback to main thread with UI yielding
+    onProgress?.('Loading circuit...', 0.2)
+
+    // Yield to let UI update before heavy computation
+    await yieldToUI()
+
+    onProgress?.('Generating proof...', 0.4)
+
+    // Another yield point
+    await yieldToUI()
+
+    try {
+      const { proof, publicSignals } = await groth16.fullProve(
+        circuitInputs,
+        WASM_PATH,
+        ZKEY_PATH
+      )
+
+      onProgress?.('Proof generated', 1.0)
+      return { proof, publicSignals }
+    } catch (error) {
+      console.error('groth16.fullProve failed:', error)
+      throw error
+    }
   }
 
   const id = generateId()

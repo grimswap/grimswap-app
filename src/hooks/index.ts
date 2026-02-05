@@ -56,3 +56,8 @@ export {
   type LiquidityState,
   type ModifyLiquidityParams,
 } from './use-liquidity'
+export {
+  useStealthAddresses,
+  generateStealthKeypair,
+  type StealthAddress,
+} from './use-stealth-addresses'

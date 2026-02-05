@@ -44,6 +44,8 @@ export interface RelayResponse {
   txHash?: string
   blockNumber?: string
   gasUsed?: string
+  fundingTxHash?: string
+  recipientAddress?: string
   error?: string
 }
 
@@ -110,6 +112,8 @@ export async function submitToRelayer(request: RelayRequest): Promise<RelayRespo
       txHash: data.txHash,
       blockNumber: data.blockNumber,
       gasUsed: data.gasUsed,
+      fundingTxHash: data.fundingTxHash,
+      recipientAddress: data.recipientAddress,
     }
   } catch (error) {
     console.error('Relayer submission failed:', error)
