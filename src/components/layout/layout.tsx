@@ -1,4 +1,5 @@
 import { Header } from './header'
+import { Footer } from './footer'
 import { NoiseOverlay } from '../effects/noise-overlay'
 
 interface LayoutProps {
@@ -7,7 +8,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="relative min-h-screen bg-void-black">
+    <div className="relative min-h-screen bg-void-black flex flex-col">
       {/* Background gradient */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-gradient-radial from-arcane-purple/5 via-transparent to-transparent" />
@@ -19,11 +20,12 @@ export function Layout({ children }: LayoutProps) {
       <NoiseOverlay />
 
       {/* Content */}
-      <div className="relative z-10">
+      <div className="relative z-10 flex flex-col min-h-screen">
         <Header />
-        <main className="pt-20">
+        <main className="pt-20 flex-1">
           {children}
         </main>
+        <Footer />
       </div>
     </div>
   )
