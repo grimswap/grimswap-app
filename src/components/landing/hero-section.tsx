@@ -187,11 +187,11 @@ export function HeroSection() {
       {/* Hero Content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] px-4 text-center max-w-[1440px] mx-auto w-full">
         {/* Main Headline */}
-        <h1 className="hero-element font-display tracking-wide mb-8">
+        <h1 className="hero-element font-display tracking-wide mb-6">
           <span
             className="block text-white"
             style={{
-              fontSize: 'clamp(3rem, 10vw, 9rem)',
+              fontSize: 'clamp(2.5rem, 8vw, 6rem)',
               lineHeight: 1,
               letterSpacing: '0.02em',
             }}
@@ -201,7 +201,7 @@ export function HeroSection() {
           <span
             className="block"
             style={{
-              fontSize: 'clamp(3rem, 10vw, 9rem)',
+              fontSize: 'clamp(2.5rem, 8vw, 6rem)',
               lineHeight: 1,
               letterSpacing: '0.02em',
               color: '#00EDDA',
@@ -213,12 +213,12 @@ export function HeroSection() {
 
         {/* Subtext */}
         <p
-          className="hero-element max-w-2xl mx-auto mb-10 text-gray-300"
+          className="hero-element max-w-xl mx-auto mb-10 text-gray-300"
           style={{
-            fontSize: 'clamp(1rem, 2vw, 1.75rem)',
+            fontSize: 'clamp(0.875rem, 1.5vw, 1.25rem)',
             fontFamily: 'Poppins, sans-serif',
             fontWeight: 400,
-            lineHeight: 1.5,
+            lineHeight: 1.6,
           }}
         >
           Privacy-preserving token swaps powered by ring signatures and stealth addresses. Trade invisibly on Uniswap v4.

@@ -36,31 +36,54 @@ interface FAQItemProps {
   answer: string
   isOpen: boolean
   onToggle: () => void
+  isFirst: boolean
+  isLast: boolean
 }
 
-function FAQItem({ question, answer, isOpen, onToggle }: FAQItemProps) {
+function FAQItem({ question, answer, isOpen, onToggle, isFirst, isLast }: FAQItemProps) {
   return (
     <div
-      className="faq-item"
-      style={{ borderBottom: '1px solid rgba(164, 35, 139, 0.15)' }}
+      className="faq-item relative"
+      style={{
+        borderBottom: isLast ? 'none' : '1px solid rgba(164, 35, 139, 0.15)',
+      }}
     >
+      {/* Gradient border highlight when open */}
+      {isOpen && (
+        <div
+          className="absolute -left-[1px] top-0 bottom-0 w-[3px]"
+          style={{
+            background: 'linear-gradient(180deg, #A4238B 0%, #00EDDA 100%)',
+            borderRadius: isFirst ? '4px 0 0 0' : isLast ? '0 0 0 4px' : '0',
+          }}
+        />
+      )}
+
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-4 py-5 px-1 text-left transition-colors duration-200"
-        style={{ color: isOpen ? '#ffffff' : '#9ca3af' }}
+        className="w-full flex items-center justify-between gap-4 py-6 px-2 text-left transition-colors duration-200"
       >
-        <span className="font-display text-lg">{question}</span>
-        <div
-          className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
+        <span
+          className="text-lg"
           style={{
-            background: isOpen ? 'rgba(0, 237, 218, 0.2)' : 'rgba(164, 35, 139, 0.2)',
+            fontFamily: "'Crimson Text', serif",
+            color: isOpen ? '#ffffff' : '#9ca3af',
+          }}
+        >
+          {question}
+        </span>
+        <div
+          className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300"
+          style={{
+            background: isOpen ? 'rgba(0, 237, 218, 0.15)' : 'rgba(164, 35, 139, 0.15)',
             border: `1px solid ${isOpen ? 'rgba(0, 237, 218, 0.4)' : 'rgba(164, 35, 139, 0.3)'}`,
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
           }}
         >
           {isOpen ? (
-            <Minus className="w-4 h-4" style={{ color: '#00EDDA' }} />
+            <Minus className="w-5 h-5" style={{ color: '#00EDDA' }} />
           ) : (
-            <Plus className="w-4 h-4 text-white" />
+            <Plus className="w-5 h-5" style={{ color: '#A4238B' }} />
           )}
         </div>
       </button>
@@ -71,10 +94,15 @@ function FAQItem({ question, answer, isOpen, onToggle }: FAQItemProps) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <p className="pb-5 px-1 text-gray-400 leading-relaxed">{answer}</p>
+            <p
+              className="pb-6 px-2 text-gray-400 leading-relaxed"
+              style={{ fontFamily: 'Poppins, sans-serif' }}
+            >
+              {answer}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -83,19 +111,18 @@ function FAQItem({ question, answer, isOpen, onToggle }: FAQItemProps) {
 }
 
 export function FAQSection() {
-  const [openIndex, setOpenIndex] = useState<number | null>(null)
+  const [openIndex, setOpenIndex] = useState<number | null>(0) // First item open by default
   const sectionRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
-        '.faq-item',
-        { y: 20, opacity: 0 },
+        '.faq-container',
+        { y: 30, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.4,
-          stagger: 0.08,
+          duration: 0.6,
           ease: 'power2.out',
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -113,33 +140,52 @@ export function FAQSection() {
   }
 
   return (
-    <section ref={sectionRef} className="py-24 px-4">
-      <div className="max-w-3xl mx-auto">
-        {/* Section header */}
-        <div className="text-center mb-12">
-          <h2 className="font-display text-3xl sm:text-4xl text-white mb-4">
-            Frequently Asked <span className="text-gradient-cyan">Questions</span>
+    <section
+      ref={sectionRef}
+      className="py-20 lg:py-28 px-6 lg:px-16"
+      style={{ background: '#121214' }}
+    >
+      <div className="max-w-[900px] mx-auto">
+        {/* Section Header */}
+        <div className="text-center mb-12 lg:mb-16">
+          <h2
+            className="text-4xl lg:text-5xl tracking-tight mb-4"
+            style={{ fontFamily: "'Crimson Text', serif" }}
+          >
+            <span className="text-white">Frequently Asked </span>
+            <span className="text-[#00EDDA]">Questions</span>
           </h2>
-          <p className="text-gray-400">Everything you need to know about GrimSwap</p>
+          <p
+            className="text-gray-400 text-base"
+            style={{ fontFamily: 'Poppins, sans-serif' }}
+          >
+            Everything you need to know about GrimSwap
+          </p>
         </div>
 
-        {/* FAQ list */}
+        {/* FAQ Container with gradient border */}
         <div
-          className="rounded-2xl p-6 sm:p-8"
+          className="faq-container rounded-2xl p-[1px]"
           style={{
-            background: 'rgba(42, 20, 40, 0.6)',
-            border: '1px solid rgba(164, 35, 139, 0.2)',
+            background: 'linear-gradient(135deg, #A4238B 0%, #6B21A8 50%, #00EDDA 100%)',
           }}
         >
-          {faqs.map((faq, index) => (
-            <FAQItem
-              key={index}
-              question={faq.question}
-              answer={faq.answer}
-              isOpen={openIndex === index}
-              onToggle={() => handleToggle(index)}
-            />
-          ))}
+          <div
+            className="rounded-2xl p-6 sm:p-8"
+            style={{ background: '#121214' }}
+          >
+            {faqs.map((faq, index) => (
+              <FAQItem
+                key={index}
+                question={faq.question}
+                answer={faq.answer}
+                isOpen={openIndex === index}
+                onToggle={() => handleToggle(index)}
+                isFirst={index === 0}
+                isLast={index === faqs.length - 1}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </section>

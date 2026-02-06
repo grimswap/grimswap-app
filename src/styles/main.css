@@ -38,8 +38,8 @@
   --color-mist-gray: #9ca3af;
 
   /* ========== Typography - Arcane Fonts ========== */
-  --font-sans: 'Crimson Text', Georgia, serif;
-  --font-display: 'Cinzel', 'Times New Roman', serif;
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --font-display: 'Crimson Text', Georgia, serif;
   --font-mono: 'Fira Code', monospace;
 
   /* ========== Animations ========== */

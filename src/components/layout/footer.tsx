@@ -1,124 +1,148 @@
 import { Link } from 'react-router-dom'
-import { Github, Twitter } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Github } from 'lucide-react'
 
-const navigation = [
-  { name: 'Swap', href: '/swap' },
-  { name: 'Pool', href: '/pool' },
-  { name: 'Wallet', href: '/wallet' },
+// X (Twitter) icon component
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+    >
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+}
+
+const navLinks = [
+  { label: 'Swap', href: '/swap' },
+  { label: 'Pool', href: '/pools' },
+  { label: 'Wallet', href: '/wallet' },
 ]
 
-const socials = [
-  {
-    name: 'Twitter',
-    href: 'https://twitter.com/grimswap',
-    icon: Twitter,
-  },
-  {
-    name: 'GitHub',
-    href: 'https://github.com/grimswap',
-    icon: Github,
-  },
+const socialLinks = [
+  { icon: XIcon, href: 'https://twitter.com/grimswap', label: 'X' },
+  { icon: Github, href: 'https://github.com/grimswap', label: 'GitHub' },
 ]
 
 export function Footer() {
+  const currentYear = new Date().getFullYear()
+
   return (
     <footer
-      className="relative border-t"
-      style={{ borderColor: 'rgba(164, 35, 139, 0.15)' }}
+      className="relative"
+      style={{
+        background: 'linear-gradient(180deg, transparent 0%, #1C0E1B 20%, #2A1428 60%, #121214 100%)',
+      }}
     >
-      {/* Background gradient */}
+      {/* Gradient Divider */}
       <div
-        className="absolute inset-0 pointer-events-none"
+        className="w-full h-px"
         style={{
-          background: 'linear-gradient(180deg, transparent 0%, rgba(18, 18, 20, 0.8) 100%)',
+          background: 'linear-gradient(90deg, transparent 0%, rgba(164, 35, 139, 0.5) 30%, rgba(0, 237, 218, 0.5) 70%, transparent 100%)',
         }}
       />
 
-      <div className="relative max-w-6xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-          {/* Brand */}
-          <div className="md:col-span-1">
-            <Link to="/" className="inline-flex items-center gap-3 mb-4 group">
+      {/* Main Footer Content */}
+      <div className="relative z-10 max-w-[1200px] mx-auto px-6 lg:px-16 py-16 lg:py-20">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-12 lg:gap-8">
+          {/* Left Column - Logo & Description */}
+          <div className="md:col-span-6 lg:col-span-5">
+            {/* Logo */}
+            <Link to="/" className="inline-flex items-center gap-3 mb-6">
               <img
-                src="/grimoire.svg"
+                src="/assets/img/logo-grimswap.png"
                 alt="GrimSwap"
-                className="w-10 h-10 group-hover:scale-105 transition-transform"
-                style={{ filter: 'drop-shadow(0 0 10px rgba(0, 237, 218, 0.4))' }}
+                className="h-10 w-auto"
               />
-              <span className="font-display text-2xl text-ghost-white">GrimSwap</span>
             </Link>
-            <p className="text-mist-gray text-sm leading-relaxed max-w-xs">
-              The Dark Arts of DeFi. Privacy-preserving token swaps powered by ZK-SNARK proofs
-              and Uniswap v4 hooks.
+
+            {/* Tagline */}
+            <p
+              className="text-gray-400 leading-relaxed mb-8 max-w-md"
+              style={{ fontFamily: 'Poppins, sans-serif' }}
+            >
+              The Dark Arts of DeFi. Privacy-preserving token swaps powered by ZK-SNARK proofs and Uniswap v4 hooks.
             </p>
 
-            {/* Built on badge */}
+            {/* Uniswap Badge */}
             <div
-              className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full"
               style={{
-                background: 'rgba(42, 20, 40, 0.5)',
-                border: '1px solid rgba(164, 35, 139, 0.15)',
+                background: 'transparent',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
               }}
             >
-              <span className="text-xs text-mist-gray">Built on</span>
-              <span className="text-xs font-medium text-ghost-white">Uniswap v4</span>
+              <span
+                className="text-sm text-gray-400"
+                style={{ fontFamily: 'Poppins, sans-serif' }}
+              >
+                Build on
+              </span>
+              <span
+                className="text-sm text-white font-medium"
+                style={{ fontFamily: 'Poppins, sans-serif' }}
+              >
+                Uniswap v4
+              </span>
             </div>
           </div>
 
-          {/* Navigation */}
-          <div>
-            <h4 className="font-display text-sm text-ghost-white mb-4">Navigate</h4>
-            <ul className="space-y-2">
-              {navigation.map((item) => (
-                <li key={item.name}>
-                  <Link
-                    to={item.href}
-                    className={cn(
-                      'text-mist-gray text-sm',
-                      'hover:text-grim-cyan',
-                      'transition-colors duration-200'
-                    )}
-                  >
-                    {item.name}
-                  </Link>
-                </li>
+          {/* Middle Column - Navigate */}
+          <div className="md:col-span-3 lg:col-span-4">
+            <h3
+              className="text-xl text-[#00EDDA] mb-6"
+              style={{ fontFamily: "'Crimson Text', serif" }}
+            >
+              Navigate
+            </h3>
+            <nav className="flex flex-col gap-3">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.label}
+                  to={link.href}
+                  className="text-gray-400 hover:text-white transition-colors duration-200"
+                  style={{ fontFamily: 'Poppins, sans-serif' }}
+                >
+                  {link.label}
+                </Link>
               ))}
-            </ul>
+            </nav>
           </div>
 
-          {/* Social & Links */}
-          <div>
-            <h4 className="font-display text-sm text-ghost-white mb-4">Community</h4>
-            <div className="flex gap-3">
-              {socials.map((social) => {
+          {/* Right Column - Community */}
+          <div className="md:col-span-3 lg:col-span-3">
+            <h3
+              className="text-xl text-[#00EDDA] mb-6"
+              style={{ fontFamily: "'Crimson Text', serif" }}
+            >
+              Community
+            </h3>
+            <div className="flex items-center gap-3">
+              {socialLinks.map((social) => {
                 const Icon = social.icon
                 return (
                   <a
-                    key={social.name}
+                    key={social.label}
                     href={social.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={cn(
-                      'w-10 h-10 rounded-xl',
-                      'flex items-center justify-center',
-                      'transition-all duration-200'
-                    )}
+                    className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200"
                     style={{
-                      background: 'rgba(42, 20, 40, 0.5)',
-                      border: '1px solid rgba(164, 35, 139, 0.15)',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(0, 237, 218, 0.3)'
-                      e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 237, 218, 0.3)'
+                      e.currentTarget.style.borderColor = 'rgba(0, 237, 218, 0.5)'
+                      e.currentTarget.style.background = 'rgba(0, 237, 218, 0.15)'
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(164, 35, 139, 0.15)'
-                      e.currentTarget.style.boxShadow = 'none'
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)'
                     }}
-                    aria-label={social.name}
+                    aria-label={social.label}
                   >
-                    <Icon className="w-5 h-5 text-mist-gray" />
+                    <Icon className="w-5 h-5 text-white" />
                   </a>
                 )
               })}
@@ -144,17 +168,22 @@ export function Footer() {
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Bottom bar */}
-        <div
-          className="mt-12 pt-6 border-t"
-          style={{ borderColor: 'rgba(164, 35, 139, 0.15)' }}
-        >
+      {/* Bottom Bar */}
+      <div className="relative z-10 border-t border-white/10">
+        <div className="max-w-[1200px] mx-auto px-6 lg:px-16 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-xs text-mist-gray/60">
-              &copy; {new Date().getFullYear()} GrimSwap. All rights reserved.
+            <p
+              className="text-gray-500 text-sm"
+              style={{ fontFamily: 'Poppins, sans-serif' }}
+            >
+              © {currentYear} GrimSwap. All rights reserved.
             </p>
-            <p className="text-xs text-mist-gray/60">
+            <p
+              className="text-gray-600 text-sm"
+              style={{ fontFamily: 'Poppins, sans-serif' }}
+            >
               Made with dark magic for the privacy-conscious.
             </p>
           </div>

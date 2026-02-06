@@ -75,29 +75,18 @@ export function HowItWorksSection() {
   }, [])
 
   return (
-    <section
+    <div
       ref={sectionRef}
-      className="relative py-20 lg:py-32 overflow-hidden bg-[#121214]"
+      className="relative pt-20 pb-8 lg:pt-32 lg:pb-12"
     >
-      {/* Left Swirl Decoration */}
-      <div
-        className="absolute left-0 bottom-0 w-[400px] h-[500px] pointer-events-none opacity-70 z-0"
-        style={{
-          backgroundImage: 'url(/assets/img/left-hero-swirl.png)',
-          backgroundSize: 'contain',
-          backgroundPosition: 'left bottom',
-          backgroundRepeat: 'no-repeat',
-        }}
-      />
-
       <div className="relative z-10 max-w-[1440px] mx-auto px-6 lg:px-16">
         {/* Section Header */}
         <div className="text-center mb-16 lg:mb-32">
           <h2
-            className="header-animate mb-6 text-4xl lg:text-6xl font-bold tracking-tight"
-            style={{ fontFamily: 'var(--font-display)', fontVariant: 'small-caps' }}
+            className="header-animate mb-6 text-4xl lg:text-6xl tracking-tight"
+            style={{ fontFamily: "'Crimson Text', serif" }}
           >
-            <span className="italic text-[#00EDDA] mr-3">How</span>
+            <span className="text-[#00EDDA] mr-3">How</span>
             <span className="text-white">It Works</span>
           </h2>
           <p
@@ -109,7 +98,7 @@ export function HowItWorksSection() {
         </div>
 
         {/* Desktop Layout - Pixel Perfect Diagram */}
-        <div className="desktop-diagram hidden lg:block relative w-full max-w-[1200px] mx-auto h-[600px]">
+        <div className="desktop-diagram hidden lg:block relative w-full max-w-[1200px] mx-auto h-[450px]">
           {/* 
              Reference Container: 80% Width - Uses available side space
           */}
@@ -132,8 +121,8 @@ export function HowItWorksSection() {
                {/* Text Side */}
                <div className="flex-1 text-left pt-6">
                  <h3
-                   className="text-white text-3xl font-bold mb-2 tracking-wide"
-                   style={{ fontFamily: 'var(--font-display)', fontVariant: 'small-caps' }}
+                   className="text-white text-2xl mb-2 tracking-wide"
+                   style={{ fontFamily: "'Crimson Text', serif" }}
                  >
                    Deposit
                  </h3>
@@ -180,8 +169,8 @@ export function HowItWorksSection() {
               {/* Text Side */}
               <div className="flex-1 text-left pt-4">
                 <h3
-                   className="text-white text-3xl font-bold mb-2 tracking-wide"
-                   style={{ fontFamily: 'var(--font-display)', fontVariant: 'small-caps' }}
+                   className="text-white text-2xl mb-2 tracking-wide"
+                   style={{ fontFamily: "'Crimson Text', serif" }}
                  >
                    Prove
                  </h3>
@@ -215,13 +204,13 @@ export function HowItWorksSection() {
             {/* Content Group - Below Icon */}
             <div
               className="step-content absolute flex items-start gap-0 w-[320px]"
-              style={{ left: '75%', top: '55%' }}
+              style={{ left: '75%', top: '75%' }}
             >
                {/* Text Side */}
                <div className="flex-1 text-left pt-6">
                  <h3
-                   className="text-white text-3xl font-bold mb-2 tracking-wide"
-                   style={{ fontFamily: 'var(--font-display)', fontVariant: 'small-caps' }}
+                   className="text-white text-2xl mb-2 tracking-wide"
+                   style={{ fontFamily: "'Crimson Text', serif" }}
                  >
                    Swap
                  </h3>
@@ -249,11 +238,8 @@ export function HowItWorksSection() {
           <div className="mobile-step relative flex flex-col items-center text-center">
              <div className="relative mb-6">
                 <img src="/assets/img/number-1.png" alt="1" className="w-24 h-auto opacity-80" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-[#121214] border-2 border-[#A4238B] flex items-center justify-center shadow-[0_0_15px_rgba(164,35,139,0.3)]">
-                   <Wallet className="w-5 h-5 text-[#A4238B]" />
-                </div>
              </div>
-             <h3 className="text-2xl text-white font-bold mb-3 tracking-wider" style={{ fontFamily: 'var(--font-display)', fontVariant: 'small-caps' }}>
+             <h3 className="text-xl text-white mb-3 tracking-wide" style={{ fontFamily: "'Crimson Text', serif" }}>
                Deposit
              </h3>
              <p className="text-gray-400 text-sm leading-relaxed max-w-xs px-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
@@ -265,11 +251,8 @@ export function HowItWorksSection() {
           <div className="mobile-step relative flex flex-col items-center text-center">
              <div className="relative mb-6">
                 <img src="/assets/img/number-2.png" alt="2" className="w-28 h-auto opacity-80" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-[#121214] border-2 border-[#A4238B] flex items-center justify-center shadow-[0_0_15px_rgba(164,35,139,0.3)]">
-                   <Shield className="w-5 h-5 text-[#A4238B]" />
-                </div>
              </div>
-             <h3 className="text-2xl text-white font-bold mb-3 tracking-wider" style={{ fontFamily: 'var(--font-display)', fontVariant: 'small-caps' }}>
+             <h3 className="text-xl text-white mb-3 tracking-wide" style={{ fontFamily: "'Crimson Text', serif" }}>
                Prove
              </h3>
              <p className="text-gray-400 text-sm leading-relaxed max-w-xs px-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
@@ -281,11 +264,8 @@ export function HowItWorksSection() {
           <div className="mobile-step relative flex flex-col items-center text-center">
              <div className="relative mb-6">
                 <img src="/assets/img/number-3.png" alt="3" className="w-28 h-auto opacity-80" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-[#121214] border-2 border-[#00EDDA] flex items-center justify-center shadow-[0_0_15px_rgba(0,237,218,0.3)]">
-                   <ArrowLeftRight className="w-5 h-5 text-[#00EDDA]" />
-                </div>
              </div>
-             <h3 className="text-2xl text-white font-bold mb-3 tracking-wider" style={{ fontFamily: 'var(--font-display)', fontVariant: 'small-caps' }}>
+             <h3 className="text-xl text-white mb-3 tracking-wide" style={{ fontFamily: "'Crimson Text', serif" }}>
                Swap
              </h3>
              <p className="text-gray-400 text-sm leading-relaxed max-w-xs px-4" style={{ fontFamily: 'Poppins, sans-serif' }}>
@@ -294,6 +274,6 @@ export function HowItWorksSection() {
           </div>
         </div>
       </div>
-    </section>
+    </div>
   )
 }

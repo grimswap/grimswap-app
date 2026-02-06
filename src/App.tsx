@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Providers } from './providers'
-import { Layout } from './components/layout/Layout'
+import { Layout } from './components/layout/layout'
 import { HomePage } from './pages/home'
 import { SwapPage } from './pages/swap'
 import { PoolsPage } from './pages/pools'

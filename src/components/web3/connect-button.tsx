@@ -33,13 +33,20 @@ export function GrimConnectButton() {
                     onClick={openConnectModal}
                     className={cn(
                       'px-5 py-2.5 rounded-xl',
-                      'bg-gradient-to-r from-arcane-purple to-purple-deep',
-                      'text-ghost-white text-sm font-semibold',
-                      'shadow-[0_0_20px_rgba(139,92,246,0.3)]',
-                      'hover:shadow-[0_0_30px_rgba(139,92,246,0.5)]',
-                      'hover:scale-[1.02] active:scale-[0.98]',
-                      'transition-all duration-200'
+                      'text-white text-sm font-medium',
+                      'transition-all duration-200',
+                      'hover:scale-[1.02] active:scale-[0.98]'
                     )}
+                    style={{
+                      background: 'linear-gradient(135deg, #A4238B 0%, #6B21A8 100%)',
+                      boxShadow: '0 0 20px rgba(164, 35, 139, 0.3)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 30px rgba(164, 35, 139, 0.5)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 0 20px rgba(164, 35, 139, 0.3)'
+                    }}
                   >
                     Enter Grimoire
                   </button>
@@ -52,11 +59,14 @@ export function GrimConnectButton() {
                     onClick={openChainModal}
                     className={cn(
                       'px-5 py-2.5 rounded-xl',
-                      'bg-blood-crimson/80 text-ghost-white text-sm font-medium',
-                      'hover:bg-blood-crimson transition-colors'
+                      'text-white text-sm font-medium',
+                      'transition-colors'
                     )}
+                    style={{
+                      background: 'rgba(220, 38, 38, 0.8)',
+                    }}
                   >
-                    Wrong Realm
+                    Wrong Network
                   </button>
                 )
               }
@@ -67,9 +77,18 @@ export function GrimConnectButton() {
                     onClick={openChainModal}
                     className={cn(
                       'flex items-center gap-2 px-3 py-2 rounded-xl',
-                      'bg-charcoal/80 border border-arcane-purple/20',
-                      'hover:border-arcane-purple/40 transition-all'
+                      'transition-all duration-200'
                     )}
+                    style={{
+                      background: 'rgba(18, 18, 20, 0.8)',
+                      border: '1px solid rgba(164, 35, 139, 0.3)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(164, 35, 139, 0.5)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(164, 35, 139, 0.3)'
+                    }}
                   >
                     {chain.hasIcon && chain.iconUrl && (
                       <img
@@ -78,7 +97,7 @@ export function GrimConnectButton() {
                         className="w-5 h-5 rounded-full"
                       />
                     )}
-                    <span className="text-ghost-white text-sm hidden sm:block">
+                    <span className="text-white text-sm hidden sm:block">
                       {chain.name}
                     </span>
                   </button>
@@ -87,16 +106,26 @@ export function GrimConnectButton() {
                     onClick={openAccountModal}
                     className={cn(
                       'flex items-center gap-2 px-3 py-2 rounded-xl',
-                      'bg-charcoal/80 border border-spectral-green/20',
-                      'hover:border-spectral-green/40 transition-all',
-                      'hover:shadow-[0_0_15px_rgba(0,255,136,0.15)]'
+                      'transition-all duration-200'
                     )}
+                    style={{
+                      background: 'rgba(18, 18, 20, 0.8)',
+                      border: '1px solid rgba(0, 237, 218, 0.3)',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(0, 237, 218, 0.5)'
+                      e.currentTarget.style.boxShadow = '0 0 15px rgba(0, 237, 218, 0.15)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'rgba(0, 237, 218, 0.3)'
+                      e.currentTarget.style.boxShadow = 'none'
+                    }}
                   >
-                    <span className="text-spectral-green font-mono text-sm">
+                    <span className="font-mono text-sm" style={{ color: '#00EDDA' }}>
                       {account.displayName}
                     </span>
                     {account.displayBalance && (
-                      <span className="text-mist-gray text-sm hidden sm:block">
+                      <span className="text-gray-400 text-sm hidden sm:block">
                         {account.displayBalance}
                       </span>
                     )}

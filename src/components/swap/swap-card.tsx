@@ -468,23 +468,24 @@ export function SwapCard() {
     <>
       <div
         ref={cardRef}
-        className={cn(
-          'relative w-full',
-          'rounded-2xl p-[1px]',
-          'bg-gradient-to-br from-arcane-purple/50 via-transparent to-spectral-green/50'
-        )}
+        className="relative w-full rounded-2xl p-[1px]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(164, 35, 139, 0.5) 0%, transparent 50%, rgba(0, 237, 218, 0.5) 100%)',
+        }}
       >
         {/* Animated glow ring */}
         <div
           ref={glowRef}
-          className={cn(
-            'absolute inset-0 rounded-2xl opacity-0',
-            'bg-gradient-conic from-arcane-purple via-spectral-green via-ethereal-cyan to-arcane-purple',
-            'blur-xl pointer-events-none'
-          )}
+          className="absolute inset-0 rounded-2xl opacity-0 blur-xl pointer-events-none"
+          style={{
+            background: 'conic-gradient(from 0deg, #A4238B, #00EDDA, #00EDDA, #A4238B)',
+          }}
         />
 
-        <div className="relative rounded-2xl bg-charcoal/95 backdrop-blur-xl p-5 sm:p-6">
+        <div
+          className="relative rounded-2xl backdrop-blur-xl p-5 sm:p-6"
+          style={{ background: 'rgba(42, 20, 40, 0.95)' }}
+        >
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-display text-xl text-ghost-white">Swap</h2>

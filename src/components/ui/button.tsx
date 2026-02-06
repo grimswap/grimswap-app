@@ -8,36 +8,12 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
-    const variants = {
-      primary: cn(
-        'bg-gradient-to-r from-arcane-purple to-purple-deep',
-        'text-ghost-white font-semibold',
-        'shadow-[0_0_20px_rgba(139,92,246,0.3)]',
-        'hover:shadow-[0_0_30px_rgba(139,92,246,0.5)]',
-        'hover:scale-[1.02] active:scale-[0.98]'
-      ),
-      secondary: cn(
-        'bg-charcoal border border-spectral-green/30',
-        'text-spectral-green',
-        'hover:border-spectral-green/60',
-        'hover:shadow-[0_0_15px_rgba(0,255,136,0.2)]'
-      ),
-      ghost: cn(
-        'bg-transparent text-mist-gray',
-        'hover:text-ghost-white hover:bg-white/5'
-      ),
-      danger: cn(
-        'bg-blood-crimson/20 border border-blood-crimson/30',
-        'text-blood-crimson',
-        'hover:bg-blood-crimson/30 hover:border-blood-crimson/50'
-      ),
-      outline: cn(
-        'bg-transparent border border-arcane-purple/30',
-        'text-ghost-white',
-        'hover:border-arcane-purple/60 hover:bg-arcane-purple/10'
-      ),
-    }
+  ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, style, ...props }, ref) => {
+    const baseStyles = cn(
+      'inline-flex items-center justify-center gap-2',
+      'font-medium transition-all duration-200',
+      'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100'
+    )
 
     const sizes = {
       sm: 'px-3 py-1.5 text-sm rounded-lg',
@@ -45,18 +21,78 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: 'px-6 py-3 text-base rounded-xl',
     }
 
+    // Variant-specific styles
+    const getVariantStyles = () => {
+      switch (variant) {
+        case 'primary':
+          return {
+            className: cn(
+              'text-white font-semibold',
+              'hover:scale-[1.02] active:scale-[0.98]'
+            ),
+            style: {
+              background: 'linear-gradient(135deg, #A4238B 0%, #6B21A8 100%)',
+              boxShadow: '0 0 20px rgba(164, 35, 139, 0.3)',
+              ...style,
+            },
+          }
+        case 'secondary':
+          return {
+            className: 'hover:scale-[1.02] active:scale-[0.98]',
+            style: {
+              background: 'rgba(42, 20, 40, 0.8)',
+              border: '1px solid rgba(0, 237, 218, 0.3)',
+              color: '#00EDDA',
+              ...style,
+            },
+          }
+        case 'ghost':
+          return {
+            className: cn(
+              'bg-transparent text-gray-400',
+              'hover:text-white hover:bg-white/5'
+            ),
+            style,
+          }
+        case 'danger':
+          return {
+            className: '',
+            style: {
+              background: 'rgba(220, 38, 38, 0.2)',
+              border: '1px solid rgba(220, 38, 38, 0.3)',
+              color: '#dc2626',
+              ...style,
+            },
+          }
+        case 'outline':
+          return {
+            className: cn(
+              'bg-transparent text-white',
+              'hover:bg-white/5'
+            ),
+            style: {
+              border: '1px solid rgba(164, 35, 139, 0.3)',
+              ...style,
+            },
+          }
+        default:
+          return { className: '', style }
+      }
+    }
+
+    const variantStyles = getVariantStyles()
+
     return (
       <button
         ref={ref}
         disabled={disabled || isLoading}
         className={cn(
-          'inline-flex items-center justify-center gap-2',
-          'font-medium transition-all duration-200',
-          'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100',
-          variants[variant],
+          baseStyles,
           sizes[size],
+          variantStyles.className,
           className
         )}
+        style={variantStyles.style}
         {...props}
       >
         {isLoading && (
