@@ -426,12 +426,12 @@ export function useLiquidity() {
  */
 export function useGrimSwapPoolKey() {
   // ETH/USDC pool with GrimSwapZK hook
-  // NOTE: Using fee=500, tickSpacing=10 which is compatible with the deployed hook
+  // NOTE: Using fee=3000, tickSpacing=60 which is compatible with the new deployed hook
   const poolKey: PoolKey = {
     currency0: CONTRACTS.nativeEth,
     currency1: CONTRACTS.usdc,
-    fee: 500, // 0.05%
-    tickSpacing: 10,
+    fee: 3000, // 0.3%
+    tickSpacing: 60,
     hooks: CONTRACTS.grimSwapZK,
   }
 

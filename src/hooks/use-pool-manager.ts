@@ -427,7 +427,8 @@ export const KNOWN_POOL_IDS = {
   // ETH/USDC 0.3% vanilla pool on Unichain Sepolia (no hooks)
   ETH_USDC_0_3: '0x1927686e9757bb312fc499e480536d466c788dcdc86a1b62c82643157f05b603',
 
-  // ETH/USDC 0.3% GrimSwap Privacy Pool (with GrimSwapZK hook at 0xc52c297f4f0d0556b1cd69b655F23df2513eC0C4)
+  // ETH/USDC 0.3% GrimSwap Privacy Pool (with GrimSwapZK hook at 0x3bee7D1A5914d1ccD34D2a2d00C359D0746400C4)
+  // Pool: fee=3000, tickSpacing=60
   // Calculated from PoolKey: keccak256(abi.encode(currency0, currency1, fee, tickSpacing, hooks))
-  ETH_USDC_GRIMSWAP: '0x1c5d2a91e568138af51b82aabdd6955ced34e51b09738234ea31ca22b4cbbe16',
+  ETH_USDC_GRIMSWAP: '0xca4150cd3ab144877e0dee5630129d84b986daa7ef5f287729e2f2da00c3fe38',
 }

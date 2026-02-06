@@ -243,12 +243,12 @@ export const ETH_USDC_POOL_KEY: PoolKey = {
 }
 
 // ETH/USDC pool key with GrimSwapZK hook (privacy-enabled pool)
-// NOTE: Using fee=500, tickSpacing=10 which is compatible with the deployed hook
+// NOTE: Using fee=3000, tickSpacing=60 which is compatible with the new deployed hook
 export const ETH_USDC_GRIMSWAP_POOL_KEY: PoolKey = {
   currency0: CONTRACTS.nativeEth, // ETH
   currency1: CONTRACTS.usdc,       // USDC
-  fee: 500,                        // 0.05% fee tier
-  tickSpacing: 10,
+  fee: 3000,                       // 0.3% fee tier
+  tickSpacing: 60,
   hooks: CONTRACTS.grimSwapZK,     // GrimSwapZK hook for privacy
 }
 
