@@ -1,14 +1,18 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { gsap } from 'gsap'
 import { cn } from '@/lib/utils'
-import { Settings, ArrowDown, Info, Clock, Percent, ExternalLink, Lock, Wallet, AlertTriangle, Loader2 } from 'lucide-react'
+import { Settings, ArrowDown, Info, Clock, Percent, ExternalLink, Lock, AlertTriangle, Loader2, FileKey, ChevronDown, Check } from 'lucide-react'
 import { TokenInput } from './token-input'
 import { TokenSelectorModal, type Token } from './token-selector-modal'
 import { SettingsPanel } from './settings-panel'
 import { ShimmerButton } from '@/components/ui/shimmer-button'
 import { TransactionSuccessModal } from '@/components/ui/transaction-success-modal'
+import { TransactionErrorModal } from '@/components/ui/transaction-error-modal'
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi'
 import { useSettings } from '@/hooks/use-settings'
+import { useOnboarding } from '@/hooks/use-onboarding'
+import { OnboardingModal } from '@/components/ui/onboarding-modal'
 import { useToast } from '@/hooks/use-toast'
 import { useStateView, useDepositNotes, useMerkleTree, useStealthAddresses } from '@/hooks'
 import { useQuoter, formatQuoteOutput } from '@/hooks/use-quoter'
@@ -21,11 +25,13 @@ import { parseUnits, formatUnits, type Address } from 'viem'
 type SwapState = 'idle' | 'preparing' | 'generating-proof' | 'submitting' | 'success' | 'error'
 
 export function SwapCard() {
+  const navigate = useNavigate()
   const { isConnected, address } = useAccount()
   const publicClient = usePublicClient()
   const { data: walletClient } = useWalletClient()
   const { settings } = useSettings()
   const { toast } = useToast()
+  const { showOnboarding, completeOnboarding } = useOnboarding()
 
   const [fromAmount, setFromAmount] = useState('')
   const [toAmount, setToAmount] = useState('')
@@ -49,6 +55,17 @@ export function SwapCard() {
     toAmount: string
     stealthAddress?: string
   } | null>(null)
+
+  // Error modal state
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [errorModalDetails, setErrorModalDetails] = useState<{
+    message: string
+    rawError?: string
+  } | null>(null)
+
+  // Note selector state
+  const [selectedNoteIndex, setSelectedNoteIndex] = useState(0)
+  const [showNoteSelector, setShowNoteSelector] = useState(false)
 
   const cardRef = useRef<HTMLDivElement>(null)
   const glowRef = useRef<HTMLDivElement>(null)
@@ -101,10 +118,11 @@ export function SwapCard() {
     return '0'
   }
 
-  // Get the first available note (what will actually be swapped)
-  const firstAvailableNote = availableNotes[0]
-  const firstNoteAmount = firstAvailableNote
-    ? Number(formatUnits(BigInt(firstAvailableNote.amount), fromToken.decimals))
+  // Get the selected note (what will actually be swapped)
+  const safeIndex = selectedNoteIndex < availableNotes.length ? selectedNoteIndex : 0
+  const selectedNote = availableNotes[safeIndex] ?? null
+  const selectedNoteAmount = selectedNote
+    ? Number(formatUnits(BigInt(selectedNote.amount), fromToken.decimals))
     : 0
 
   // Calculate total deposit notes balance
@@ -132,14 +150,19 @@ export function SwapCard() {
     ? zeroForOne ? currentPrice : inversePrice || 0
     : 0
 
-  // Auto-fill amount from deposit note for privacy swaps
+  // Reset selected note index when available notes change (e.g. token switch)
   useEffect(() => {
-    if (isPrivacyPool && availableNotes.length > 0 && isConnected && swapState === 'idle') {
-      const note = availableNotes[0]
-      const noteAmountFormatted = formatUnits(BigInt(note.amount), fromToken.decimals)
+    setSelectedNoteIndex(0)
+    setShowNoteSelector(false)
+  }, [fromToken.address])
+
+  // Auto-fill amount from selected deposit note for privacy swaps
+  useEffect(() => {
+    if (isPrivacyPool && selectedNote && isConnected && swapState === 'idle') {
+      const noteAmountFormatted = formatUnits(BigInt(selectedNote.amount), fromToken.decimals)
       setFromAmount(noteAmountFormatted)
     }
-  }, [isPrivacyPool, availableNotes, isConnected, fromToken.decimals, swapState])
+  }, [isPrivacyPool, selectedNote, isConnected, fromToken.decimals, swapState, selectedNoteIndex])
 
   // Calculate output amount using Quoter
   useEffect(() => {
@@ -240,11 +263,11 @@ export function SwapCard() {
       setSwapState('preparing')
       setSwapStep('Preparing swap...')
 
-      const suitableNote = availableNotes[0]
-      if (!suitableNote) {
-        throw new Error('No deposit notes available')
+      if (!selectedNote) {
+        throw new Error('No deposit note selected')
       }
 
+      const suitableNote = selectedNote
       const noteAmount = BigInt(suitableNote.amount)
 
       // Step 1: Generate ZK proof
@@ -265,6 +288,7 @@ export function SwapCard() {
       setSwapStep('Creating stealth address...')
       // Generate keypair but don't save until swap succeeds
       const stealthRecord = generateStealthKeypairOnly()
+      stealthRecord.swapOutputToken = toToken.symbol
       const stealthAddress = stealthRecord.address
 
       setSwapStep('Computing ZK-SNARK proof...')
@@ -356,7 +380,7 @@ export function SwapCard() {
         ? undefined
         : fromToken.address as Address
 
-      const relayResponse = await submitToRelayer({
+      const relayPayload = {
         proof: formattedProof.proof,
         publicSignals: formattedProof.publicSignals,
         swapParams: createSwapParams(
@@ -366,7 +390,17 @@ export function SwapCard() {
           sqrtPriceLimitX96,
           inputToken
         ),
-      })
+      }
+
+      const MAX_RELAY_RETRIES = 3
+      let relayResponse = await submitToRelayer(relayPayload)
+
+      for (let attempt = 2; attempt <= MAX_RELAY_RETRIES && !relayResponse.success; attempt++) {
+        console.warn(`Relayer attempt ${attempt - 1} failed: ${relayResponse.error}. Retrying (${attempt}/${MAX_RELAY_RETRIES})...`)
+        setSwapStep(`Retrying relayer (${attempt}/${MAX_RELAY_RETRIES})...`)
+        await new Promise((r) => setTimeout(r, 1500))
+        relayResponse = await submitToRelayer(relayPayload)
+      }
 
       if (!relayResponse.success) {
         throw new Error(relayResponse.error || 'Relayer submission failed')
@@ -411,8 +445,11 @@ export function SwapCard() {
       console.error('Swap failed:', error)
       setSwapState('error')
       setSwapStep('')
-      setSwapError(error instanceof Error ? error.message : 'Unknown error')
-      toast.error('Swap Failed', error instanceof Error ? error.message : 'Unknown error')
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      const rawErr = error instanceof Error ? error.stack || error.message : String(error)
+      setSwapError(errorMsg)
+      setErrorModalDetails({ message: errorMsg, rawError: rawErr })
+      setShowErrorModal(true)
     }
   }, [isConnected, address, relayerInfo, isPrivacyPool, availableNotes, fromToken, toToken, toAmount, zeroForOne, toast, generateStealthKeypairOnly, saveStealthAddress, updateSwapTxHash, getMerkleProof, publicClient, walletClient, currentPrice, spendNote, resetSwapState])
 
@@ -615,26 +652,132 @@ export function SwapCard() {
             </div>
           )}
 
-          {/* Available Notes */}
+          {/* Note Selector */}
           {isPrivacyPool && availableNotes.length > 0 && !poolLoading && (
-            <div className="mb-5 p-3 rounded-xl bg-arcane-purple/5 border border-arcane-purple/20">
-              <div className="flex items-center justify-between text-xs mb-2">
-                <span className="text-mist-gray flex items-center gap-1.5">
-                  <Wallet className="w-3.5 h-3.5" />
-                  {fromToken.symbol} Deposit Notes
-                </span>
-                <span className="text-ethereal-cyan font-mono font-medium">
-                  {totalNotesBalance.toFixed(fromToken.decimals > 6 ? 4 : 2)} {fromToken.symbol}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-mist-gray">
-                  {availableNotes.length} note{availableNotes.length > 1 ? 's' : ''} available
-                </span>
-                <span className="text-mist-gray">
-                  Swapping: <span className="text-spectral-green font-mono">{firstNoteAmount.toFixed(fromToken.decimals > 6 ? 4 : 2)} {fromToken.symbol}</span>
-                </span>
-              </div>
+            <div className="mb-5 space-y-2">
+              {/* Selected Note Display / Toggle */}
+              <button
+                onClick={() => availableNotes.length > 1 && setShowNoteSelector(!showNoteSelector)}
+                disabled={availableNotes.length <= 1}
+                className={cn(
+                  'w-full p-3 rounded-xl border transition-all text-left',
+                  'bg-arcane-purple/5',
+                  availableNotes.length > 1
+                    ? 'border-arcane-purple/20 hover:border-arcane-purple/40 cursor-pointer'
+                    : 'border-arcane-purple/20 cursor-default'
+                )}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-mist-gray flex items-center gap-1.5">
+                    <FileKey className="w-3.5 h-3.5" />
+                    Using Deposit Note
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-mist-gray">
+                      {availableNotes.length} note{availableNotes.length > 1 ? 's' : ''}
+                    </span>
+                    {availableNotes.length > 1 && (
+                      <ChevronDown className={cn(
+                        'w-3.5 h-3.5 text-mist-gray transition-transform',
+                        showNoteSelector && 'rotate-180'
+                      )} />
+                    )}
+                  </div>
+                </div>
+                {selectedNote && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-mono text-spectral-green font-medium">
+                        {selectedNoteAmount.toFixed(fromToken.decimals > 6 ? 4 : 2)} {fromToken.symbol}
+                      </span>
+                      {selectedNote.leafIndex !== undefined && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-charcoal text-mist-gray font-mono">
+                          Leaf #{selectedNote.leafIndex}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-mist-gray">
+                      {new Date(selectedNote.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                )}
+                {availableNotes.length > 1 && !showNoteSelector && (
+                  <p className="text-[10px] text-mist-gray/50 mt-1 px-1">
+                    One note per swap. Tap to choose a different note.
+                  </p>
+                )}
+              </button>
+
+              {/* Expanded Note List */}
+              {showNoteSelector && availableNotes.length > 1 && (
+                <div className="rounded-xl border border-arcane-purple/20 bg-obsidian/80 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-arcane-purple/10">
+                    <p className="text-[10px] text-mist-gray uppercase tracking-wider">Select a deposit note to swap</p>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto">
+                    {availableNotes.map((note, index) => {
+                      const noteAmt = Number(formatUnits(BigInt(note.amount), fromToken.decimals))
+                      const isSelected = index === safeIndex
+
+                      return (
+                        <button
+                          key={note.id ?? index}
+                          onClick={() => {
+                            setSelectedNoteIndex(index)
+                            setShowNoteSelector(false)
+                          }}
+                          className={cn(
+                            'w-full px-3 py-2.5 flex items-center justify-between transition-colors text-left',
+                            'border-b border-arcane-purple/5 last:border-b-0',
+                            isSelected
+                              ? 'bg-arcane-purple/15'
+                              : 'hover:bg-arcane-purple/5'
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className={cn(
+                              'w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0',
+                              isSelected
+                                ? 'bg-spectral-green/20'
+                                : 'bg-charcoal'
+                            )}>
+                              {isSelected ? (
+                                <Check className="w-3 h-3 text-spectral-green" />
+                              ) : (
+                                <FileKey className="w-3 h-3 text-mist-gray" />
+                              )}
+                            </div>
+                            <div>
+                              <span className={cn(
+                                'text-sm font-mono font-medium',
+                                isSelected ? 'text-spectral-green' : 'text-ghost-white'
+                              )}>
+                                {noteAmt.toFixed(fromToken.decimals > 6 ? 4 : 2)} {fromToken.symbol}
+                              </span>
+                              {note.leafIndex !== undefined && (
+                                <span className="ml-2 text-[10px] text-mist-gray font-mono">
+                                  Leaf #{note.leafIndex}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-mist-gray flex-shrink-0">
+                            {new Date(note.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <div className="px-3 py-2 border-t border-arcane-purple/10 bg-charcoal/30 space-y-1">
+                    <p className="text-[10px] text-mist-gray">
+                      Total: <span className="text-ethereal-cyan font-mono">{totalNotesBalance.toFixed(fromToken.decimals > 6 ? 4 : 2)} {fromToken.symbol}</span> across {availableNotes.length} notes
+                    </p>
+                    <p className="text-[10px] text-mist-gray/60">
+                      Only one note can be used per swap. Each note is spent in full.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -761,6 +904,7 @@ export function SwapCard() {
           onClose={() => {
             setShowSuccessModal(false)
             setSuccessDetails(null)
+            navigate('/wallet')
           }}
           details={{
             type: 'swap',
@@ -776,6 +920,32 @@ export function SwapCard() {
           explorerBaseUrl="https://unichain-sepolia.blockscout.com"
         />
       )}
+
+      {/* Error Modal */}
+      {errorModalDetails && (
+        <TransactionErrorModal
+          isOpen={showErrorModal}
+          onClose={() => {
+            setShowErrorModal(false)
+            setErrorModalDetails(null)
+          }}
+          onRetry={() => {
+            setSwapState('idle')
+            setSwapError(null)
+          }}
+          details={{
+            type: 'swap',
+            message: errorModalDetails.message,
+            rawError: errorModalDetails.rawError,
+          }}
+        />
+      )}
+
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onComplete={completeOnboarding}
+      />
     </>
   )
 }

@@ -24,6 +24,8 @@ export interface StealthAddress {
   claimed: boolean
   claimTxHash?: string
   claimDestination?: Address
+  // Token received from the swap (e.g. 'USDC' or 'ETH')
+  swapOutputToken?: string
   // Balances (updated by scanning)
   balances?: {
     eth: string

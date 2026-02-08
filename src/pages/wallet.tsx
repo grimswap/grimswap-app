@@ -4,6 +4,8 @@ import { useAccount, usePublicClient } from 'wagmi'
 import { parseUnits, formatUnits, createWalletClient, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { useDepositNotes, useGrimPool, useStealthAddresses, useStateView, type StealthAddress } from '@/hooks'
+import { useOnboarding } from '@/hooks/use-onboarding'
+import { OnboardingModal } from '@/components/ui/onboarding-modal'
 import { DEFAULT_POOL_KEY } from '@/lib/contracts'
 import { useNativeBalance, useTokenBalance } from '@/hooks/use-token-balance'
 import { unichainSepolia } from '@/lib/wagmi'
@@ -12,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { TransactionSuccessModal } from '@/components/ui/transaction-success-modal'
+import { TransactionErrorModal, type ErrorType } from '@/components/ui/transaction-error-modal'
 import { cn } from '@/lib/utils'
 import { ETH, formatTokenAmount } from '@/lib/tokens'
 import {
@@ -45,6 +48,7 @@ import type { StoredDepositNote } from '@/lib/storage/deposit-notes'
 export function WalletPage() {
   const { address, isConnected } = useAccount()
   const pageRef = useRef<HTMLDivElement>(null)
+  const { showOnboarding, completeOnboarding } = useOnboarding()
 
   // Deposit notes management
   const {
@@ -122,6 +126,15 @@ export function WalletPage() {
     destination?: string
   } | null>(null)
 
+  // Error modal state
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [errorDetails, setErrorDetails] = useState<{
+    type: ErrorType
+    message: string
+    rawError?: string
+    retryAction?: () => void
+  } | null>(null)
+
   // Refresh stealth balances on mount and when addresses change
   useEffect(() => {
     if (isConnected && unclaimedAddresses.length > 0) {
@@ -182,6 +195,19 @@ export function WalletPage() {
       setDepositAmount('')
       setDepositToken('ETH')
       refreshNotes()
+    } else if (depositError) {
+      // Show error modal
+      setIsDepositModalOpen(false)
+      setErrorDetails({
+        type: depositError.toLowerCase().includes('approv') ? 'approval' : 'deposit',
+        message: depositError,
+        rawError: depositError,
+        retryAction: () => {
+          resetDeposit()
+          setIsDepositModalOpen(true)
+        },
+      })
+      setShowErrorModal(true)
     }
   }
 
@@ -284,15 +310,16 @@ export function WalletPage() {
     }
   }, [publicClient, unclaimedAddresses, updateBalances])
 
-  // Claim token type state
-  const [claimTokenType, setClaimTokenType] = useState<'USDC' | 'ETH' | 'BOTH'>('USDC')
-
-  // Claim from stealth address (send tokens to destination)
+  // Claim from stealth address (send the swap output token to destination)
   const handleClaim = useCallback(async () => {
     if (!selectedStealth || !claimDestination || !publicClient) return
 
     setIsClaiming(true)
     setClaimError(null)
+
+    // Determine which token to claim based on what was swapped
+    const outputToken = selectedStealth.swapOutputToken || 'USDC'
+    const claimingUsdc = outputToken === 'USDC'
 
     try {
       // Create wallet client from stealth private key
@@ -303,100 +330,120 @@ export function WalletPage() {
         transport: http(),
       })
 
-      // Get balances
-      const ethBalance = await publicClient.getBalance({ address: selectedStealth.address })
-      const usdcBalance = await publicClient.readContract({
-        address: USDC.address,
-        abi: [
-          {
-            type: 'function',
-            name: 'balanceOf',
-            inputs: [{ name: 'account', type: 'address' }],
-            outputs: [{ name: '', type: 'uint256' }],
-            stateMutability: 'view',
-          },
-        ],
-        functionName: 'balanceOf',
-        args: [selectedStealth.address],
-      }) as bigint
-
       let txHash: `0x${string}` | null = null
 
-      // Transfer based on selected token type
-      if (claimTokenType === 'USDC' || claimTokenType === 'BOTH') {
-        if (usdcBalance > 0n) {
-          txHash = await stealthWallet.writeContract({
-            address: USDC.address,
-            abi: [
-              {
-                type: 'function',
-                name: 'transfer',
-                inputs: [
-                  { name: 'to', type: 'address' },
-                  { name: 'amount', type: 'uint256' },
-                ],
-                outputs: [{ name: '', type: 'bool' }],
-                stateMutability: 'nonpayable',
-              },
-            ],
-            functionName: 'transfer',
-            args: [claimDestination as `0x${string}`, usdcBalance],
-          })
-          await publicClient.waitForTransactionReceipt({ hash: txHash })
+      if (claimingUsdc) {
+        // Claim USDC
+        const usdcBalance = await publicClient.readContract({
+          address: USDC.address,
+          abi: [
+            {
+              type: 'function',
+              name: 'balanceOf',
+              inputs: [{ name: 'account', type: 'address' }],
+              outputs: [{ name: '', type: 'uint256' }],
+              stateMutability: 'view',
+            },
+          ],
+          functionName: 'balanceOf',
+          args: [selectedStealth.address],
+        }) as bigint
+
+        if (usdcBalance <= 0n) {
+          throw new Error('No USDC balance to claim')
         }
-      }
 
-      if (claimTokenType === 'ETH' || claimTokenType === 'BOTH') {
-        // Reserve some ETH for gas if also claiming USDC
-        const gasReserve = claimTokenType === 'BOTH' ? parseUnits('0.0002', 18) : 0n
-        const ethToSend = ethBalance > gasReserve ? ethBalance - gasReserve : 0n
+        txHash = await stealthWallet.writeContract({
+          address: USDC.address,
+          abi: [
+            {
+              type: 'function',
+              name: 'transfer',
+              inputs: [
+                { name: 'to', type: 'address' },
+                { name: 'amount', type: 'uint256' },
+              ],
+              outputs: [{ name: '', type: 'bool' }],
+              stateMutability: 'nonpayable',
+            },
+          ],
+          functionName: 'transfer',
+          args: [claimDestination as `0x${string}`, usdcBalance],
+        })
+        await publicClient.waitForTransactionReceipt({ hash: txHash })
 
-        if (ethToSend > 0n) {
-          txHash = await stealthWallet.sendTransaction({
-            to: claimDestination as `0x${string}`,
-            value: ethToSend,
-          })
-          await publicClient.waitForTransactionReceipt({ hash: txHash })
+        // Mark as claimed
+        await markAsClaimed(selectedStealth.address, txHash, claimDestination as `0x${string}`)
+
+        setSuccessDetails({
+          type: 'claim',
+          txHash,
+          amount: formatUnits(usdcBalance, 6),
+          tokenSymbol: 'USDC',
+          tokenLogo: USDC.logoURI,
+          destination: claimDestination,
+        })
+      } else {
+        // Claim ETH — simple transfer is always 21000 gas
+        const ethBalance = await publicClient.getBalance({ address: selectedStealth.address })
+        const GAS_LIMIT = 21000n
+        const feeData = await publicClient.estimateFeesPerGas()
+        // Use maxFeePerGas if available (EIP-1559), otherwise fall back to gasPrice
+        const effectiveGasPrice = feeData.maxFeePerGas
+          ?? await publicClient.getGasPrice()
+        const maxGasCost = GAS_LIMIT * effectiveGasPrice * 150n / 100n // 50% buffer for price fluctuation
+        const ethToSend = ethBalance > maxGasCost ? ethBalance - maxGasCost : 0n
+
+        if (ethToSend <= 0n) {
+          throw new Error(`Insufficient ETH balance to cover gas. Balance: ${formatUnits(ethBalance, 18)} ETH, estimated gas: ${formatUnits(maxGasCost, 18)} ETH`)
         }
+
+        txHash = await stealthWallet.sendTransaction({
+          to: claimDestination as `0x${string}`,
+          value: ethToSend,
+          gas: GAS_LIMIT,
+        })
+        await publicClient.waitForTransactionReceipt({ hash: txHash })
+
+        // Mark as claimed
+        await markAsClaimed(selectedStealth.address, txHash, claimDestination as `0x${string}`)
+
+        setSuccessDetails({
+          type: 'claim',
+          txHash,
+          amount: formatUnits(ethToSend, 18),
+          tokenSymbol: 'ETH',
+          tokenLogo: ETH.logoURI,
+          destination: claimDestination,
+        })
       }
 
-      if (!txHash) {
-        throw new Error('No tokens to claim')
-      }
-
-      // Mark as claimed
-      await markAsClaimed(selectedStealth.address, txHash, claimDestination as `0x${string}`)
-
-      // Calculate claimed amount for success modal
-      const claimedAmount = claimTokenType === 'USDC' || claimTokenType === 'BOTH'
-        ? formatUnits(usdcBalance, 6)
-        : formatUnits(ethBalance, 18)
-      const claimedToken = claimTokenType === 'USDC' ? USDC : ETH
-
-      // Show success modal
-      setSuccessDetails({
-        type: 'claim',
-        txHash: txHash,
-        amount: claimedAmount,
-        tokenSymbol: claimTokenType === 'BOTH' ? 'USDC + ETH' : claimedToken.symbol,
-        tokenLogo: claimedToken.logoURI,
-        destination: claimDestination,
-      })
       setShowSuccessModal(true)
 
       // Close modal
       setIsClaimModalOpen(false)
       setSelectedStealth(null)
       setClaimDestination('')
-      setClaimTokenType('USDC')
 
     } catch (error) {
       console.error('Claim failed:', error)
-      setClaimError(error instanceof Error ? error.message : 'Failed to claim')
+      const errorMsg = error instanceof Error ? error.message : 'Failed to claim'
+      const rawErr = error instanceof Error ? error.stack || error.message : String(error)
+
+      // Close claim modal and show error modal
+      setIsClaimModalOpen(false)
+      const stealthToRetry = selectedStealth
+      setErrorDetails({
+        type: 'claim',
+        message: errorMsg,
+        rawError: rawErr,
+        retryAction: stealthToRetry ? () => openClaimModal(stealthToRetry) : undefined,
+      })
+      setShowErrorModal(true)
     } finally {
       setIsClaiming(false)
     }
-  }, [selectedStealth, claimDestination, publicClient, markAsClaimed, claimTokenType])
+  }, [selectedStealth, claimDestination, publicClient, markAsClaimed])
 
   // Open claim modal
   const openClaimModal = (stealth: StealthAddress) => {
@@ -775,7 +822,11 @@ export function WalletPage() {
                       ? formatUnits(BigInt(stealth.balances.usdc), 6)
                       : '0'
                     // Check if there's meaningful balance (ETH > 0.001 for gas buffer, or any USDC)
-                    const hasEthBalance = parseFloat(ethBal) > 0.001 // More than just gas funding
+                    // If swap output is ETH, any ETH above gas funding counts as claimable
+                    const isEthOutput = stealth.swapOutputToken === 'ETH'
+                    const hasEthBalance = isEthOutput
+                      ? parseFloat(ethBal) > 0.0006 // More than relayer gas funding (0.0005)
+                      : parseFloat(ethBal) > 0.001
                     const hasUsdcBalance = parseFloat(usdcBal) > 0
                     const hasBalance = hasEthBalance || hasUsdcBalance
                     // Calculate USD equivalent values
@@ -1292,81 +1343,34 @@ export function WalletPage() {
                     </p>
                   </div>
                 </div>
-                <div className="mt-3 pt-3 border-t border-spectral-green/10 grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-mist-gray mb-1 flex items-center gap-1">
-                      <img src={ETH.logoURI} alt="ETH" className="w-3 h-3" />
-                      ETH Balance (for gas)
-                    </p>
-                    <p className="font-mono text-ghost-white">
-                      {selectedStealth.balances?.eth
-                        ? parseFloat(formatUnits(BigInt(selectedStealth.balances.eth), 18)).toFixed(5)
-                        : '0'}{' '}
-                      ETH
-                    </p>
-                    {ethPrice && selectedStealth.balances?.eth && (
-                      <p className="text-xs text-mist-gray mt-0.5">
-                        ≈ ${(parseFloat(formatUnits(BigInt(selectedStealth.balances.eth), 18)) * ethPrice).toFixed(2)}
+                <div className="mt-3 pt-3 border-t border-spectral-green/10">
+                  {(selectedStealth.swapOutputToken || 'USDC') === 'USDC' ? (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-mist-gray flex items-center gap-1">
+                        <img src={USDC.logoURI} alt="USDC" className="w-3 h-3" />
+                        Claimable USDC
                       </p>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs text-mist-gray mb-1 flex items-center gap-1">
-                      <img src={USDC.logoURI} alt="USDC" className="w-3 h-3" />
-                      USDC Balance
-                    </p>
-                    <p className="font-mono text-spectral-green">
-                      {selectedStealth.balances?.usdc
-                        ? parseFloat(formatUnits(BigInt(selectedStealth.balances.usdc), 6)).toFixed(2)
-                        : '0'}{' '}
-                      USDC
-                    </p>
-                    <p className="text-xs text-mist-gray mt-0.5">
-                      ≈ ${selectedStealth.balances?.usdc
-                        ? parseFloat(formatUnits(BigInt(selectedStealth.balances.usdc), 6)).toFixed(2)
-                        : '0'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Token Type Selection */}
-              <div>
-                <label className="block text-sm text-mist-gray mb-2">What to Claim</label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    onClick={() => setClaimTokenType('USDC')}
-                    className={cn(
-                      'p-2 rounded-lg border text-sm transition-all',
-                      claimTokenType === 'USDC'
-                        ? 'bg-spectral-green/20 border-spectral-green/50 text-spectral-green'
-                        : 'bg-obsidian border-arcane-purple/20 text-mist-gray hover:border-arcane-purple/40'
-                    )}
-                  >
-                    USDC Only
-                  </button>
-                  <button
-                    onClick={() => setClaimTokenType('ETH')}
-                    className={cn(
-                      'p-2 rounded-lg border text-sm transition-all',
-                      claimTokenType === 'ETH'
-                        ? 'bg-ethereal-cyan/20 border-ethereal-cyan/50 text-ethereal-cyan'
-                        : 'bg-obsidian border-arcane-purple/20 text-mist-gray hover:border-arcane-purple/40'
-                    )}
-                  >
-                    ETH Only
-                  </button>
-                  <button
-                    onClick={() => setClaimTokenType('BOTH')}
-                    className={cn(
-                      'p-2 rounded-lg border text-sm transition-all',
-                      claimTokenType === 'BOTH'
-                        ? 'bg-arcane-purple/20 border-arcane-purple/50 text-ghost-white'
-                        : 'bg-obsidian border-arcane-purple/20 text-mist-gray hover:border-arcane-purple/40'
-                    )}
-                  >
-                    Both
-                  </button>
+                      <p className="font-mono text-spectral-green">
+                        {selectedStealth.balances?.usdc
+                          ? parseFloat(formatUnits(BigInt(selectedStealth.balances.usdc), 6)).toFixed(2)
+                          : '0'}{' '}
+                        USDC
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-mist-gray flex items-center gap-1">
+                        <img src={ETH.logoURI} alt="ETH" className="w-3 h-3" />
+                        Claimable ETH
+                      </p>
+                      <p className="font-mono text-spectral-green">
+                        {selectedStealth.balances?.eth
+                          ? parseFloat(formatUnits(BigInt(selectedStealth.balances.eth), 18)).toFixed(5)
+                          : '0'}{' '}
+                        ETH
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1391,7 +1395,7 @@ export function WalletPage() {
                   <div className="text-xs text-mist-gray">
                     <p className="text-ethereal-cyan font-medium mb-1">Privacy Note</p>
                     <p>
-                      This transaction will transfer USDC from the stealth address to your destination.
+                      This will transfer your {selectedStealth.swapOutputToken || 'USDC'} from the stealth address to your destination.
                       The stealth address has been funded with ETH for gas by the relayer.
                     </p>
                   </div>
@@ -1419,7 +1423,7 @@ export function WalletPage() {
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Claim {claimTokenType === 'BOTH' ? 'All Tokens' : claimTokenType}
+                    Claim {selectedStealth?.swapOutputToken || 'USDC'}
                   </>
                 )}
               </Button>
@@ -1447,6 +1451,30 @@ export function WalletPage() {
           explorerBaseUrl="https://unichain-sepolia.blockscout.com"
         />
       )}
+
+      {/* Error Modal */}
+      {errorDetails && (
+        <TransactionErrorModal
+          isOpen={showErrorModal}
+          onClose={() => {
+            setShowErrorModal(false)
+            setErrorDetails(null)
+            resetDeposit()
+          }}
+          onRetry={errorDetails.retryAction}
+          details={{
+            type: errorDetails.type,
+            message: errorDetails.message,
+            rawError: errorDetails.rawError,
+          }}
+        />
+      )}
+
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onComplete={completeOnboarding}
+      />
     </div>
   )
 }
