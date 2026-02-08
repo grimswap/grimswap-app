@@ -12,6 +12,9 @@ Privacy-preserving DEX frontend for Uniswap v4 on Unichain Sepolia, powered by Z
 - **Position Tracking**: Track your liquidity positions with on-chain event scanning
 - **Real-time Pool Data**: Live pool state from Uniswap v4 StateView
 - **Transaction Success Modals**: Animated confirmation modals for all transactions
+- **Onboarding Modal**: Multi-step walkthrough for first-time users (per-wallet)
+- **Relayer Auto-Retry**: Automatic retry (up to 3 attempts) on relayer submission failures
+- **Smart Claim Flow**: Auto-detects swap output token for claiming from stealth addresses
 
 ## Tech Stack
 
@@ -51,7 +54,7 @@ src/
 │   ├── layout/        # Header, layout wrapper
 │   ├── privacy/       # Ring visualization, stealth balance, privacy meter
 │   ├── swap/          # Swap card, token inputs, settings, pool statistics
-│   ├── ui/            # Buttons, cards, modals, inputs, success modal
+│   ├── ui/            # Buttons, cards, modals, inputs, onboarding, success/error modals
 │   └── web3/          # Connect button, transaction status
 ├── hooks/
 │   ├── use-deposit-notes.ts       # IndexedDB note management
@@ -60,11 +63,12 @@ src/
 │   ├── use-liquidity.ts           # Add/remove liquidity
 │   ├── use-liquidity-positions.ts # Track LP positions from events
 │   ├── use-merkle-tree.ts         # Poseidon tree sync
+│   ├── use-onboarding.ts          # Per-wallet onboarding state
 │   ├── use-pool-manager.ts        # Pool state from events
 │   ├── use-quoter.ts              # Swap quotes from Quoter contract
 │   ├── use-settings.ts            # User settings (slippage, deadline)
 │   ├── use-state-view.ts          # Pool state from StateView
-│   ├── use-stealth-addresses.ts   # Stealth keypair management
+│   ├── use-stealth-addresses.ts   # Stealth keypair management (+ swap output token)
 │   ├── use-token-balance.ts       # ETH/ERC20 balances
 │   ├── use-token-price.ts         # CoinGecko price feeds
 │   └── use-zk-proof.ts            # ZK proof generation
@@ -88,12 +92,13 @@ src/
 ## Pages
 
 ### `/swap` - Private Swap
-1. Deposit ETH/USDC to GrimPool (creates encrypted note)
-2. Select swap amount (uses full note amount)
-3. Generate ZK proof client-side
-4. Submit to relayer for anonymous execution
-5. Receive output tokens at stealth address
-6. Claim from stealth address in Grimoire
+1. First-time users see an onboarding walkthrough explaining the privacy flow
+2. Deposit ETH/USDC to GrimPool (creates encrypted note)
+3. Select swap amount (uses full note amount)
+4. Generate ZK proof client-side
+5. Submit to relayer (auto-retries up to 3 times on failure)
+6. Receive output tokens at stealth address
+7. Redirects to Grimoire after successful swap
 
 ### `/pools` - Liquidity Pools
 - View active pools (vanilla ETH/USDC + GrimSwap privacy pool)
@@ -108,7 +113,7 @@ src/
 - Manage deposit notes (view, copy, delete)
 - Export/import notes for backup
 - View stealth addresses with real-time balances
-- Claim tokens from stealth addresses to any wallet
+- Claim swap output tokens from stealth addresses (auto-detects ETH or USDC)
 - Transaction history
 
 ## Contract Addresses (Unichain Sepolia)
@@ -162,10 +167,11 @@ src/
    └─► Relayer funds stealth address with ETH for gas
 
 3. CLAIM
-   User → View stealth address balance in Grimoire
+   User → Redirected to Grimoire after swap
+   └─► View stealth address balance (auto-detects swap output token)
    └─► Click "Claim" → enter destination address
    └─► Sign transaction with stealth private key
-   └─► Tokens transferred to destination
+   └─► Only the swapped token (ETH or USDC) is transferred to destination
 ```
 
 ## Development
@@ -191,9 +197,9 @@ npm run preview
 
 The app connects to the GrimSwap relayer at `https://services.grimswap.com` for submitting private swaps. The relayer:
 - Validates ZK proofs before submission
-- Submits transactions on-chain
+- Submits transactions on-chain (auto-retries up to 3 times on intermittent failures)
 - Pays gas on behalf of users
-- Funds stealth addresses with ETH for claiming (~0.0001 ETH)
+- Funds stealth addresses with ETH for claiming (~0.0005 ETH)
 
 ### Relayer Endpoints
 
@@ -229,8 +235,8 @@ Tracks user positions via:
 
 | Storage | Purpose |
 |---------|---------|
-| IndexedDB | Deposit notes (encrypted secrets) |
-| localStorage | Stealth addresses, LP positions, settings |
+| IndexedDB | Deposit notes (encrypted secrets), stealth addresses |
+| localStorage | LP positions, settings, onboarding state (per-wallet) |
 
 **Important**: Always backup your deposit notes! They are stored locally and cannot be recovered if lost.
 
