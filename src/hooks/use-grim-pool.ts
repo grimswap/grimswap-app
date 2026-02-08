@@ -215,39 +215,51 @@ export function useGrimPool() {
         setCurrentNote(note)
         const commitment = formatCommitmentForContract(note.commitment)
 
-        // 2. For ERC20, ALWAYS request fresh approval for exact amount
+        // 2. For ERC20, check existing allowance first, only approve if needed
         if (!isETH) {
           const spenderAddress = CONTRACTS.grimPoolMultiToken
           console.log('ERC20 deposit - spender:', spenderAddress)
 
-          // Always request approval for exact amount (ensures correct spender)
-          setState('approving')
-          toast.info('Approving', `Approving ${tokenSymbol} for deposit...`)
+          // Check if we already have sufficient allowance
+          const existingAllowance = await checkAllowance(tokenAddress, amount)
+          console.log('Existing allowance:', existingAllowance.toString(), 'needed:', amount.toString())
 
-          console.log('Requesting approval for amount:', amount.toString(), 'to spender:', spenderAddress)
-          const approveTxHash = await approveToken(tokenAddress, amount)
+          if (existingAllowance < amount) {
+            setState('approving')
+            toast.info('Approving', `Approving ${tokenSymbol} for deposit...`)
 
-          if (!approveTxHash) {
-            throw new Error('Approval transaction was not submitted')
-          }
+            console.log('Requesting approval for amount:', amount.toString(), 'to spender:', spenderAddress)
+            const approveTxHash = await approveToken(tokenAddress, amount)
 
-          console.log('Approval tx submitted:', approveTxHash)
-          toast.info('Confirming', 'Waiting for approval confirmation...')
+            if (!approveTxHash) {
+              throw new Error('Approval transaction was not submitted')
+            }
 
-          const approvalReceipt = await publicClient.waitForTransactionReceipt({ hash: approveTxHash })
+            console.log('Approval tx submitted:', approveTxHash)
+            toast.info('Confirming', 'Waiting for approval confirmation...')
 
-          if (approvalReceipt.status === 'reverted') {
-            throw new Error('Approval transaction reverted')
-          }
+            const approvalReceipt = await publicClient.waitForTransactionReceipt({ hash: approveTxHash })
 
-          console.log('Approval confirmed!')
+            if (approvalReceipt.status === 'reverted') {
+              throw new Error('Approval transaction reverted')
+            }
 
-          // Verify the allowance was actually set
-          const newAllowance = await checkAllowance(tokenAddress, amount)
-          console.log('New allowance after approval:', newAllowance.toString())
+            console.log('Approval confirmed in block:', approvalReceipt.blockNumber)
 
-          if (newAllowance < amount) {
-            throw new Error(`Approval failed: allowance is ${newAllowance.toString()} but need ${amount.toString()}`)
+            // Wait for RPC nonce to catch up after approval tx
+            const approvalTx = await publicClient.getTransaction({ hash: approveTxHash })
+            const expectedNonce = approvalTx.nonce + 1
+            for (let i = 0; i < 10; i++) {
+              const currentNonce = await publicClient.getTransactionCount({ address })
+              if (currentNonce >= expectedNonce) {
+                console.log('Nonce updated:', currentNonce)
+                break
+              }
+              console.log(`Waiting for nonce update (${currentNonce} < ${expectedNonce}), attempt ${i + 1}`)
+              await new Promise(r => setTimeout(r, 500))
+            }
+          } else {
+            console.log('Sufficient allowance already exists, skipping approval')
           }
         }
 
